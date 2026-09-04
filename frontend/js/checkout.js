@@ -289,7 +289,7 @@ async function processarPedidoPix(orderDetails) {
     }
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/api/criar-pix', {
+        const response = await fetch('https://montae-burguer-api.onrender.com/api/criar-pix', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -328,7 +328,7 @@ function iniciarVerificacaoPagamento(paymentId, orderDetails) {
 
     pixCheckInterval = setInterval(async () => {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/verificar-pix/${paymentId}`);
+            const response = await fetch(`https://montae-burguer-api.onrender.com/api/verificar-pix/${paymentId}`);
             if (response.ok) {
                 const data = await response.json();
                 
