@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Montaê Burguer - Monte do Seu Jeito!</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBtemqVNZdGVWSGMTjaNlGDghCr6SQHu8M&libraries=places"></script>
+    <!-- Tailwind CSS v4 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Ícones FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style type="text/tailwindcss">
+        @theme {
+            --color-laranja: #FF9F0D;
+            --color-laranja-hover: #E08800;
+            --color-dark: #121212;
+            --color-dark-card: #1E1E1E;
+        }
+
+        /* Animações customizadas */
+        .fade-in-slide {
+            animation: fadeInSlide 0.5s ease-out forwards;
+        }
+
+        .swap-smooth {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } } .animate-shake { animation: shake 0.3s ease-in-out; }
+
+    </style>
+</head>
+<body class="bg-[#121212] text-gray-100 font-sans pb-16 md:pb-0">
+
+    <!-- HEADER / TOPO -->
+    <header class="bg-[#1E1E1E] text-white shadow-md sticky top-0 z-40 border-b border-neutral-800">
+        <div class="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img src="images/logo.jpeg" alt="Montaê Burguer Logo" class="w-10 h-10 rounded-full object-cover border border-[#FF9F0D] shadow-sm">
+                <div>
+                    <h1 class="text-xl font-black tracking-wider text-[#FF9F0D]">MONTAÊ BURGUER</h1>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-widest">Feito Entre Amigos</p>
+                </div>
+            </div>
+
+            <!-- Botão Carrinho no Canto Superior Direito (Apenas Desktop) -->
+            <button onclick="openCartDrawer()" class="hidden md:flex items-center gap-2 bg-neutral-900 border border-neutral-800 hover:border-[#FF9F0D] px-3.5 py-2 rounded-xl transition cursor-pointer group">
+                <div class="relative">
+                    <i class="fa-solid fa-bag-shopping text-[#FF9F0D] text-base group-hover:scale-110 transition-transform"></i>
+                    <span id="cart-count-header" class="absolute -top-2 -right-2.5 bg-[#FF9F0D] text-black text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center border border-black">
+                        0
+                    </span>
+                </div>
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-300 group-hover:text-white">Meu Pedido</span>
+            </button>
+        </div>
+    </header>
+    
+    <!-- BANNER HERO -->
+    <section class="relative bg-black py-16 md:py-20 px-4 border-b border-neutral-800 overflow-hidden">
+        <img src="https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=1600&q=80" alt="Hambúrguer na Chapa" class="absolute inset-0 w-full h-full object-cover opacity-40">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#121212] via-black/60 to-black/80"></div>
+        
+        <div class="relative z-10 max-w-4xl mx-auto text-center text-white">
+            <span class="bg-[#FF9F0D] text-black text-[10px] md:text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-xl inline-flex items-center gap-1.5 mb-3">
+                <i class="fa-solid fa-fire"></i> Na Chapa • Amigos • Brasa
+            </span>
+            <h2 class="text-3xl md:text-5xl font-black tracking-tight uppercase leading-tight drop-shadow-lg">
+                Monte Do <span class="text-[#FF9F0D]">Seu Jeito!</span>
+            </h2>
+            <p class="mt-2 text-sm md:text-lg font-bold text-gray-300 tracking-wide">
+                VOCÊ ESCOLHE. A GENTE FAZ NA CHAPA.
+            </p>
+
+            <!-- Botões CTA Hero -->
+            <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-3">
+                <button onclick="revealAndScrollBuilder()" class="w-full sm:w-auto bg-[#FF9F0D] hover:bg-[#E08800] text-black font-black px-5 py-2.5 rounded-xl shadow-xl transition transform hover:scale-105 cursor-pointer flex items-center justify-center gap-2 text-sm uppercase tracking-wider border border-[#FF9F0D]">
+                    <i class="fa-solid fa-burger text-base"></i> Monte Seu Hambúrguer
+                </button>
+
+                <!-- NOVO BOTÃO: Acompanhar Pedido -->
+                <a href="https://wa.me/+5531990081997?text=Ol%C3%A1!%20Gostaria%20de%20saber%20o%20status%20do%20meu%20pedido." target="_blank" class="w-full sm:w-auto bg-neutral-900/90 hover:bg-neutral-800 text-white font-bold px-5 py-2.5 rounded-xl shadow-xl transition border border-neutral-700 hover:border-[#FF9F0D] cursor-pointer flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
+                    <i class="fa-brands fa-whatsapp text-emerald-500 text-base"></i> Acompanhar Pedido
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- SEÇÃO PRINCIPAL: COMBO COMPLETO -->
+    <section id="secao-combo" class="max-w-5xl mx-auto px-4 py-10 scroll-mt-20">
+        <div class="bg-[#1E1E1E] rounded-3xl border border-[#FF9F0D]/30 p-5 md:p-8 shadow-2xl overflow-hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                
+                <!-- CONTAINER DA IMAGEM COM ALTURA AUMENTADA -->
+                <div class="relative group rounded-2xl overflow-hidden border border-neutral-800 bg-black/40 h-80 sm:h-96 md:h-[420px] flex items-center justify-center">
+                    <img src="images/hb_completo.jpeg" alt="Hambúrguer Completo" class="w-full h-full object-cover object-center shadow-2xl transition duration-300 group-hover:scale-105">
+                    <span class="absolute top-3 left-3 bg-black/90 text-[#FF9F0D] text-[10px] font-black px-2.5 py-1 rounded-md border border-[#FF9F0D]/40 uppercase tracking-wider">
+                        Combo Completo
+                    </span>
+                </div>
+
+                <div class="flex flex-col justify-between h-full">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-2xl font-black text-white uppercase tracking-wider">Hambúrguer Completo</h3>
+                            <div class="bg-[#FF9F0D] text-black font-black px-3 py-1 rounded-xl text-xl shadow-md whitespace-nowrap">
+                                R$ 29,90
+                            </div>
+                        </div>
+                        
+                        <p class="text-xs font-bold text-[#FF9F0D] uppercase tracking-widest mb-4">
+                            Acompanha Batata Frita e Refrigerante
+                        </p>
+
+                        <div class="bg-neutral-900 rounded-2xl p-4 border border-neutral-800 mb-6">
+                            <h4 class="text-[11px] font-black text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle-check text-[#FF9F0D]"></i> Já Acompanham na Base:
+                            </h4>
+                            <div class="grid grid-cols-3 gap-1.5 text-center text-[11px]">
+                                <div class="bg-[#1E1E1E] py-1.5 px-2 rounded-lg border border-neutral-800 font-bold text-white">Pão</div>
+                                <div class="bg-[#1E1E1E] py-1.5 px-2 rounded-lg border border-neutral-800 font-bold text-white">Hambúrguer</div>
+                                <div class="bg-[#1E1E1E] py-1.5 px-2 rounded-lg border border-neutral-800 font-bold text-white">Queijo</div>
+                                <div class="bg-[#1E1E1E] py-1.5 px-2 rounded-lg border border-neutral-800 font-bold text-white">Cebola</div>
+                                <div class="bg-[#1E1E1E] py-1.5 px-2 rounded-lg border border-neutral-800 font-bold text-white">Alface</div>
+                                <div class="bg-[#1E1E1E] py-1.5 px-2 rounded-lg border border-neutral-800 font-bold text-white">Tomate</div>
+                                <div class="bg-[#1E1E1E] py-1.5 px-2 rounded-lg border border-neutral-800 font-bold text-white">Ovo</div>
+                                <div class="bg-[#1E1E1E] py-1.5 px-2 rounded-lg border border-neutral-800 font-bold text-white">Bacon</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BOTÃO PARA REVELAR O CONSTRUTOR -->
+                    <button onclick="revealAndScrollBuilder()" class="w-full bg-[#FF9F0D] hover:bg-[#E08800] text-black font-black py-3 px-4 rounded-xl shadow-lg transition cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider text-xs">
+                        <i class="fa-solid fa-sliders text-sm"></i> Clique para Montar Suas Opções
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ÁREA DO CONSTRUTOR (ESCONDIDA ATÉ CLICAR EM MONTAR) -->
+    <section id="construtor" class="hidden max-w-5xl mx-auto px-4 py-8 scroll-mt-16">
+        
+        <div id="builder-card" class="bg-[#1E1E1E] border-2 border-[#FF9F0D] rounded-3xl p-5 md:p-8 shadow-2xl">
+            
+            <div class="border-b border-neutral-800 pb-4 mb-8 flex items-center justify-between flex-wrap gap-2">
+                <div>
+                    <span class="text-[10px] font-black text-[#FF9F0D] uppercase tracking-widest block">Sua Receita Exclusiva</span>
+                    <h3 class="text-xl md:text-2xl font-black text-white uppercase tracking-wider">Escolha Seus Ingredientes</h3>
+                </div>
+                <div class="bg-black/60 border border-neutral-800 px-3 py-1.5 rounded-xl flex items-center gap-2">
+                    <span class="text-xs text-gray-400 font-bold">Total:</span>
+                    <span class="text-lg font-black text-[#FF9F0D]">R$ 29,90</span>
+                </div>
+            </div>
+
+            <form id="burger-builder-form" class="space-y-8">
+                
+                <!-- BLOCO 1: ITENS INCLUSOS NO COMBO (BASE GRÁTIS) -->
+                <div class="bg-neutral-900/60 p-5 rounded-2xl border border-neutral-800 space-y-6">
+                    <span class="text-[10px] pb-5 font-black text-[#FF9F0D] uppercase tracking-widest block -mb-2">
+                        Base do Combo (Incluso no valor de R$ 29,90)
+                    </span>
+
+                    <!-- 1. ESCOLHA O PÃO -->
+                    <div>
+                        <h4 class="text-xs font-black text-white uppercase tracking-wider mb-2.5 flex items-center gap-2">
+                            <span class="w-2.5 h-5 rounded bg-[#FF9F0D]"></span> 1. Escolha o Pão
+                        </h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <label class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition">
+                                <span class="font-bold text-xs text-white">Brioche</span>
+                                <input type="radio" name="pao" value="Brioche" checked class="accent-[#FF9F0D] w-4 h-4">
+                            </label>
+                            <label class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition">
+                                <span class="font-bold text-xs text-white">Australiano</span>
+                                <input type="radio" name="pao" value="Australiano" class="accent-[#FF9F0D] w-4 h-4">
+                            </label>
+                            <label class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition">
+                                <span class="font-bold text-xs text-white">Gergelim</span>
+                                <input type="radio" name="pao" value="Gergelim" class="accent-[#FF9F0D] w-4 h-4">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 2. PONTO DA CARNE -->
+                    <div>
+                        <h4 class="text-xs font-black text-white uppercase tracking-wider mb-2.5 flex items-center gap-2">
+                            <span class="w-2.5 h-5 rounded bg-[#FF9F0D]"></span> 2. Ponto da Carne
+                        </h4>
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="flex items-center justify-center p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition text-center">
+                                <input type="radio" name="ponto" value="Mal Passado" class="hidden peer">
+                                <span class="font-bold text-xs text-gray-400 peer-checked:text-[#FF9F0D]">Mal Passado</span>
+                            </label>
+                            <label class="flex items-center justify-center p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition text-center">
+                                <input type="radio" name="ponto" value="Ao Ponto" checked class="hidden peer">
+                                <span class="font-bold text-xs text-gray-400 peer-checked:text-[#FF9F0D]">Ao Ponto</span>
+                            </label>
+                            <label class="flex items-center justify-center p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition text-center">
+                                <input type="radio" name="ponto" value="Bem Passado" class="hidden peer">
+                                <span class="font-bold text-xs text-gray-400 peer-checked:text-[#FF9F0D]">Bem Passado</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 3. ESCOLHA A CEBOLA (Base Incluso) -->
+                    <div>
+                        <h4 class="text-xs font-black text-white uppercase tracking-wider mb-2.5 flex items-center gap-2">
+                            <span class="w-2.5 h-5 rounded bg-[#FF9F0D]"></span> 3. Escolha a Cebola
+                        </h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <label class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition">
+                                <span class="font-bold text-xs text-white">Onion Rings</span>
+                                <input type="radio" name="cebola_base" value="Onion Rings" checked class="accent-[#FF9F0D] w-4 h-4">
+                            </label>
+                            <label class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition">
+                                <span class="font-bold text-xs text-white">Cebola Chapeada</span>
+                                <input type="radio" name="cebola_base" value="Cebola Chapeada" class="accent-[#FF9F0D] w-4 h-4">
+                            </label>
+                            <label class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition">
+                                <span class="font-bold text-xs text-white">Cebola Caramelizada</span>
+                                <input type="radio" name="cebola_base" value="Cebola Caramelizada" class="accent-[#FF9F0D] w-4 h-4">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 4. ESCOLHA O QUEIJO (Base Incluso) -->
+                    <div>
+                        <h4 class="text-xs font-black text-white uppercase tracking-wider mb-2.5 flex items-center gap-2">
+                            <span class="w-2.5 h-5 rounded bg-[#FF9F0D]"></span> 4. Escolha o Queijo
+                        </h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <label class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition">
+                                <span class="font-bold text-xs text-white">Mussarela</span>
+                                <input type="radio" name="queijo_base" value="Mussarela" checked class="accent-[#FF9F0D] w-4 h-4">
+                            </label>
+                            <label class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition">
+                                <span class="font-bold text-xs text-white">Cheddar</span>
+                                <input type="radio" name="queijo_base" value="Cheddar" class="accent-[#FF9F0D] w-4 h-4">
+                            </label>
+                            <label class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition">
+                                <span class="font-bold text-xs text-white">Prato</span>
+                                <input type="radio" name="queijo_base" value="Prato" class="accent-[#FF9F0D] w-4 h-4">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 5. MOLHO GRÁTIS DO COMBO -->
+                    <div>
+                        <h4 class="text-xs font-black text-white uppercase tracking-wider mb-2.5 flex items-center gap-2">
+                            <span class="w-2.5 h-5 rounded bg-[#FF9F0D]"></span> 5. Escolha 1 Molho Grátis
+                        </h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <label class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition">
+                                <div>
+                                    <p class="font-bold text-xs text-white">Baconese</p>
+                                    <p class="text-[10px] text-emerald-400 font-semibold">Grátis</p>
+                                </div>
+                                <input type="radio" name="molho_gratis" value="Baconese" checked class="accent-[#FF9F0D] w-4 h-4">
+                            </label>
+                            <label class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl cursor-pointer hover:border-[#FF9F0D]/50 transition">
+                                <div>
+                                    <p class="font-bold text-xs text-white">Maionese Temperada</p>
+                                    <p class="text-[10px] text-emerald-400 font-semibold">Grátis</p>
+                                </div>
+                                <input type="radio" name="molho_gratis" value="Maionese Temperada" class="accent-[#FF9F0D] w-4 h-4">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BLOCO 2: ADICIONAIS PAGOS (PADRONIZADOS) -->
+                <div>
+                    <h4 class="text-xs font-black text-[#FF9F0D] uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-plus-circle text-sm"></i> Deseja Adicionais Extras? (Opcional)
+                    </h4>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        
+                        <!-- Ovo Extra -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Ovo Extra</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 4,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('ovo', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-ovo" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('ovo', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-ovo" data-name="Ovo Extra" data-price="4.00" value="0">
+                        </div>
+
+                        <!-- Bacon Extra -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Bacon Extra</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 5,00 porção</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('bacon', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-bacon" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('bacon', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-bacon" data-name="Bacon Extra" data-price="5.00" value="0">
+                        </div>
+
+                        <!-- Cheddar Extra -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Cheddar Extra</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 4,00 porção</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('queijo-cheddar', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-queijo-cheddar" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('queijo-cheddar', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-queijo-cheddar" data-name="Queijo Cheddar Extra" data-price="4.00" value="0">
+                        </div>
+
+                        <!-- Mussarela Extra -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Mussarela Extra</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 4,00 porção</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('queijo-mussarela', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-queijo-mussarela" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('queijo-mussarela', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-queijo-mussarela" data-name="Queijo Mussarela Extra" data-price="4.00" value="0">
+                        </div>
+
+                        <!-- Queijo Prato Extra -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Queijo Prato Extra</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 4,00 porção</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('queijo-prato', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-queijo-prato" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('queijo-prato', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-queijo-prato" data-name="Queijo Prato Extra" data-price="4.00" value="0">
+                        </div>
+
+                        <!-- Onion Rings Extra -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Onion Rings Extra</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 4,00 porção</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('onion', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-onion" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('onion', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-onion" data-name="Onion Rings Extra" data-price="4.00" value="0">
+                        </div>
+
+                        <!-- Cebola Chapeada Extra -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Cebola Chapeada Extra</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 3,00 porção</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('cebola-chapeada', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-cebola-chapeada" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('cebola-chapeada', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-cebola-chapeada" data-name="Cebola Chapeada Extra" data-price="3.00" value="0">
+                        </div>
+
+                        <!-- Cebola Caramelizada Extra -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Cebola Caramelizada Extra</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 3,50 porção</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('cebola-caramelizada', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-cebola-caramelizada" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('cebola-caramelizada', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-cebola-caramelizada" data-name="Cebola Caramelizada Extra" data-price="3.50" value="0">
+                        </div>
+
+                        <!-- Baconese Extra -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Baconese Extra</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 3,00 porção</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('baconese', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-baconese" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('baconese', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-baconese" data-name="Baconese Extra" data-price="3.00" value="0">
+                        </div>
+
+                        <!-- Maionese Temperada Extra -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Maionese Temperada Extra</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 3,00 porção</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('maionese', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-maionese" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('maionese', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-maionese" data-name="Maionese Temperada Extra" data-price="3.00" value="0">
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- BLOCO 3: OBSERVAÇÕES DO ITEM (NOVO) -->
+                <div>
+                    <h4 class="text-xs font-black text-white uppercase tracking-wider mb-2.5 flex items-center gap-2">
+                        <i class="fa-regular fa-comment-dots text-[#FF9F0D]"></i> Observações do Pedido
+                    </h4>
+                    <textarea 
+                        name="observacoes" 
+                        id="builder-observacoes" 
+                        rows="2" 
+                        placeholder="Ex: Sem salada, tomate e etc."
+                        class="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-3 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#FF9F0D] transition resize-none"
+                    ></textarea>
+                </div>
+                
+                <!-- BARRA INFERIOR COM BOTÕES E QUANTIDADE -->
+                <div class="flex items-center justify-between gap-3 mt-6 pt-4 border-t border-neutral-800">
+                    <button type="button" onclick="closeBuilder()" class="bg-neutral-800 hover:bg-neutral-700 text-gray-300 font-bold py-3 px-4 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 text-xs uppercase tracking-wider border border-neutral-700 shrink-0">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                        <span class="hidden sm:inline">Fechar</span>
+                    </button>
+                    
+                    <div class="flex items-center gap-2 sm:gap-3 flex-1 justify-end max-w-xs sm:max-w-none">
+                        <div class="flex items-center bg-black/60 border border-neutral-700 rounded-xl p-1 shadow-inner shrink-0">
+                            <button type="button" onclick="changeBuilderQuantity(-1)" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white font-black transition flex items-center justify-center text-sm sm:text-base cursor-pointer">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                            <span id="builder-quantity" class="w-7 sm:w-10 text-center font-black text-white text-sm sm:text-base">1</span>
+                            <button type="button" onclick="changeBuilderQuantity(1)" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white font-black transition flex items-center justify-center text-sm sm:text-base cursor-pointer">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+
+                        <button type="button" onclick="submitBurgerForm()" class="flex-1 sm:flex-none bg-[#FF9F0D] hover:bg-[#E08800] text-black font-black py-3.5 px-3 sm:px-5 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider text-[11px] sm:text-xs shadow-lg whitespace-nowrap">
+                            <i class="fa-solid fa-cart-plus text-sm sm:text-base"></i>
+                            <span>Adicionar</span>
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+
+    </section>
+
+    <!-- RODAPÉ -->
+    <footer class="bg-black text-white border-t border-neutral-800 mt-12">
+        <div class="max-w-5xl mx-auto px-4 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <img src="images/logo.jpeg" alt="Montaê Burguer Logo" class="w-7 h-7 rounded-full object-cover border border-[#FF9F0D]">
+                        <h3 class="text-sm font-black text-[#FF9F0D] uppercase tracking-wider">
+                            Montaê Burguer
+                        </h3>
+                    </div>
+                    <p class="text-gray-400 leading-relaxed">
+                        Feito entre amigos, histórias que viram tradição. Hambúrguer artesanal preparado com paixão na chapa.
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black mb-2 flex items-center gap-2 text-[#FF9F0D]">
+                        <i class="fa-regular fa-clock"></i> Funcionamento
+                    </h3>
+                    <p class="text-gray-400"> -- -- -- </p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black mb-2 flex items-center gap-2 text-[#FF9F0D]">
+                        <i class="fa-solid fa-location-dot"></i> Endereço & Contato
+                    </h3>
+                    <p class="text-gray-400">Rua Mário Soares, 23 - Dom Bosco</p>
+                    <p class="text-gray-400">Belo Horizonte - MG</p>
+                    <p class="text-gray-400 mt-1">Delivery via WhatsApp</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- BARRA FIXA DE NAVEGAÇÃO INFERIOR (Apenas Mobile - 'md:hidden') -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-[#1E1E1E] border-t border-neutral-800 shadow-2xl z-40 md:hidden">
+        <div class="max-w-md mx-auto flex items-center justify-around py-2 px-4">
+            <!-- Botão Início -->
+            <a href="#" class="group flex flex-col items-center text-[10px] font-bold text-gray-400 hover:text-[#FF9F0D]">
+                <i class="fa-solid fa-house text-base mb-0.5"></i>
+                <span>Início</span>
+            </a>
+
+            <!-- Botão Central de Montar -->
+            <button onclick="revealAndScrollBuilder()" class="group flex flex-col items-center text-[10px] font-black text-[#FF9F0D] cursor-pointer">
+                <div class="bg-[#FF9F0D] text-black w-10 h-10 rounded-full flex items-center justify-center shadow-lg -mt-5 border-4 border-[#121212]">
+                    <i class="fa-solid fa-burger text-base"></i>
+                </div>
+                <span class="mt-0.5">Montar</span>
+            </button>
+
+            <!-- Botão do Carrinho -->
+            <button onclick="openCartDrawer()" class="group relative flex flex-col items-center text-[10px] font-bold text-gray-400 hover:text-[#FF9F0D] cursor-pointer">
+                <div class="relative">
+                    <i class="fa-solid fa-bag-shopping text-base"></i>
+                    <span id="cart-count" class="absolute -top-1.5 -right-2.5 bg-[#FF9F0D] text-black text-[9px] font-black rounded-full w-3.5 h-3.5 flex items-center justify-center border border-black">
+                        0
+                    </span>
+                </div>
+                <span class="mt-0.5">Carrinho</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- NOTIFICAÇÃO TOAST -->
+    <div id="toast-notification" class="fixed top-4 right-4 bg-[#FF9F0D] text-black font-bold px-5 py-3 rounded-xl shadow-2xl z-50 transform translate-y-[-150%] transition-transform duration-300 flex items-center gap-3 border border-black/20 text-xs">
+        <i class="fa-solid fa-circle-check text-xl"></i>
+        <div>
+            <p id="toast-title" class="font-black uppercase">Adicionado ao Pedido!</p>
+            <p id="toast-desc" class="text-[11px] opacity-90">Seu combo montado está no carrinho.</p>
+        </div>
+    </div>
+
+    <!-- SIDEBAR / DRAWER DO CARRINHO -->
+    <div id="cart-drawer-backdrop" class="fixed inset-0 bg-black/70 z-50 hidden opacity-0 transition-opacity duration-300 backdrop-blur-sm" onclick="closeCartDrawer()"></div>
+
+    <aside id="cart-drawer" class="fixed top-0 right-0 bottom-0 w-full max-w-md bg-[#1E1E1E] border-l border-neutral-800 z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col shadow-2xl">
+
+        <!-- BANNER INFORMATIVO: ACOMPANHAMENTOS INCLUSOS -->
+        <div class="mx-4 my-3 p-3 bg-neutral-900/90 border border-[#FF9F0D]/40 rounded-xl flex items-center gap-3 shadow-md">
+            <div class="w-9 h-9 rounded-lg bg-[#FF9F0D]/10 border border-[#FF9F0D]/30 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-gift text-lg text-[#FF9F0D]"></i>
+            </div>
+            
+            <div class="flex-1">
+                <p class="text-xs text-gray-300 font-medium leading-snug">
+                    Todos os hambúrgueres já acompanham <strong class="text-white font-bold">Batata Frita</strong> e <strong class="text-[#FF9F0D] font-bold">Refrigerante Pequeno</strong>
+                </p>
+            </div>
+        </div>
+
+        <!-- Topo do Carrinho -->
+        <div class="p-4 border-b border-neutral-800 flex items-center justify-between bg-black/40">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-bag-shopping text-[#FF9F0D] text-lg"></i>
+                <h3 class="text-base font-black text-white uppercase tracking-wider">Seu Pedido</h3>
+            </div>
+            <button onclick="closeCartDrawer()" class="text-gray-400 hover:text-white p-2 rounded-lg transition cursor-pointer">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Lista de Itens no Carrinho -->
+        <div id="cart-items-container" class="flex-1 overflow-y-auto p-4 space-y-3">
+            <!-- Exemplo de estado vazio (gerado via JS) -->
+        </div>
+
+        <!-- Rodapé do Carrinho -->
+        <div class="p-4 border-t border-neutral-800 bg-neutral-900/90 space-y-3">
+            <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-400 font-bold uppercase tracking-wider text-xs">Subtotal</span>
+                <span id="cart-subtotal" class="text-xl font-black text-[#FF9F0D]">R$ 0,00</span>
+            </div>
+
+            <button id="btn-checkout" onclick="openCheckoutModal()" disabled class="w-full bg-[#FF9F0D] hover:bg-[#E08800] disabled:bg-neutral-800 disabled:text-gray-600 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider text-xs shadow-lg">
+                Avançar para Pagamento <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Modal / Drawer de Checkout -->
+    <div id="checkout-modal-backdrop" class="fixed inset-0 bg-black/70 z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
+        <div id="checkout-modal" class="bg-neutral-900 border border-neutral-800 w-full max-w-lg rounded-3xl p-6 shadow-2xl transform scale-95 transition-transform duration-300 max-h-[90vh] overflow-y-auto">
+            
+            <!-- Cabeçalho -->
+            <div class="flex items-center justify-between border-b border-neutral-800 pb-4 mb-4">
+                <h3 class="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-receipt text-[#FF9F0D]"></i> Finalizar Pedido
+                </h3>
+                <button onclick="closeCheckoutModal()" class="text-neutral-500 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Formulário de Coleta de Dados -->
+            <form id="checkout-form" onsubmit="handleCheckoutSubmit(event)" class="space-y-4">
+                
+                <!-- Nome -->
+                <div>
+                    <label for="checkout-name" class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">Nome Completo *</label>
+                    <input type="text" id="checkout-name" required placeholder="Digite seu nome"
+                        class="w-full bg-black/60 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#FF9F0D]">
+                </div>
+
+                <!-- Campo WhatsApp -->
+                <div>
+                    <label for="checkout-phone" class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">WhatsApp *</label>
+                    <input 
+                        type="tel" 
+                        id="checkout-phone" 
+                        required 
+                        maxlength="16"
+                        placeholder="(31) 9 9999 9999"
+                        oninput="handlePhoneMask(event)"
+                        class="w-full bg-black/60 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#FF9F0D]"
+                    >
+                </div>
+
+                <!-- Tipo de Entrega -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">Tipo de Entrega *</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="delivery-type" value="Delivery" checked onchange="toggleAddressField(true)" class="peer hidden">
+                            <div class="border-2 border-neutral-800 bg-black/40 text-gray-400 peer-checked:border-[#FF9F0D] peer-checked:text-[#FF9F0D] peer-checked:bg-[#FF9F0D]/10 rounded-xl p-3 text-center transition font-bold text-xs uppercase">
+                                <i class="fa-solid fa-motorcycle text-sm block mb-1"></i> Delivery
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="delivery-type" value="Retirada" onchange="toggleAddressField(false)" class="peer hidden">
+                            <div class="border-2 border-neutral-800 bg-black/40 text-gray-400 peer-checked:border-[#FF9F0D] peer-checked:text-[#FF9F0D] peer-checked:bg-[#FF9F0D]/10 rounded-xl p-3 text-center transition font-bold text-xs uppercase">
+                                <i class="fa-solid fa-store text-sm block mb-1"></i> Retirada
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Container de Endereço Inteligente (Google Maps) -->
+                <div id="address-container" class="space-y-3">
+                    <div class="border-t border-neutral-800 pt-3 flex items-start justify-between">
+                        <span class="text-xs font-black text-[#FF9F0D] uppercase tracking-wider block mb-2">
+                            <i class="fa-solid fa-location-dot mr-1"></i> Endereço de Entrega
+                        </span>
+                    </div>
+
+                    <!-- Autocomplete Endereço -->
+                    <div>
+                        <label for="checkout-autocomplete" class="block text-[11px] font-bold text-gray-300 uppercase tracking-wider mb-1">Buscar Endereço (Rua e Bairro) *</label>
+                        <input type="text" id="checkout-autocomplete" required placeholder="Digite sua rua ou bairro..."
+                            class="address-field w-full bg-black/60 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#FF9F0D]">
+                    </div>
+
+                    <!-- Número e Complemento -->
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label for="checkout-number" class="block text-[11px] font-bold text-gray-300 uppercase tracking-wider mb-1">Número *</label>
+                            <input type="text" id="checkout-number" required placeholder="123"
+                                class="address-field w-full bg-black/60 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#FF9F0D]">
+                        </div>
+                        <div class="col-span-2">
+                            <label for="checkout-complement" class="block text-[11px] font-bold text-gray-300 uppercase tracking-wider mb-1">Complemento</label>
+                            <input type="text" id="checkout-complement" placeholder="Apt, Bloco, etc"
+                                class="w-full bg-black/60 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#FF9F0D]">
+                        </div>
+                    </div>
+
+                    <!-- Tabela de Preços e Calculadora de Frete -->
+                    <div class="bg-black/30 border border-neutral-800 rounded-xl p-3 mt-2">
+                        <h4 class="text-[10px] font-bold text-[#FF9F0D] uppercase tracking-wider mb-1"><i class="fa-solid fa-motorcycle mr-1"></i> Valores de Entrega</h4>
+                        <p class="text-[9px] text-gray-400 mb-2 leading-relaxed">
+                            <strong>R$ 4,00:</strong> Dom Bosco, Glória, Ipanema, California 1 e 2, California Velho, João Pinheiro, Altos dos Pinheiros, Dom Cabral e Coração Eucarístico.<br>
+                            <strong>Outros bairros:</strong> Até 4km R$ 5,00 | Até 5km R$ 7,00 | +5km Indisponível (Peça via iFood ou agende Uber Flash no nosso WhatsApp).
+                        </p>
+                        
+                        <!-- Resumo Dinâmico do Custo -->
+                        <div class="bg-black/60 rounded-lg p-2 border border-neutral-700 mt-2 space-y-1">
+                            <div class="flex justify-between text-[11px] text-gray-300">
+                                <span>Subtotal:</span>
+                                <span id="checkout-summary-subtotal" class="font-bold">R$ 0,00</span>
+                            </div>
+                            <div class="flex justify-between text-[11px] text-gray-300">
+                                <span>Frete:</span>
+                                <span id="checkout-summary-frete" class="font-bold text-emerald-400">Calculando...</span>
+                            </div>
+                            <div class="flex justify-between text-xs text-[#FF9F0D] font-black border-t border-neutral-700 pt-1 mt-1">
+                                <span>Total Final:</span>
+                                <span id="checkout-summary-total">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORMA DE PAGAMENTO -->
+                <div class="border-t border-neutral-800 pt-3">
+                    <label class="block text-xs font-black text-[#FF9F0D] uppercase tracking-wider mb-2">
+                        <i class="fa-solid fa-credit-card mr-1"></i> Forma de Pagamento *
+                    </label>
+                    
+                    <div class="space-y-2">
+                        <!-- Opção PIX -->
+                        <label class="flex items-center gap-3 p-3 bg-black/40 rounded-xl cursor-pointer border border-neutral-800 hover:border-[#FF9F0D] transition">
+                            <input type="radio" name="payment-method" value="pix" checked onchange="toggleTrocoField(false)" class="accent-[#FF9F0D]">
+                            <i class="fa-brands fa-[#FF9F0D] fa-pix text-emerald-400 text-base"></i>
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-white uppercase">PIX (Mercado Pago)</span>
+                                <span class="text-[10px] text-gray-400">Aprovação imediata via QR Code</span>
+                            </div>
+                        </label>
+
+                        <!-- Opção Cartão na Entrega -->
+                        <label class="flex items-center gap-3 p-3 bg-black/40 rounded-xl cursor-pointer border border-neutral-800 hover:border-[#FF9F0D] transition">
+                            <input type="radio" name="payment-method" value="cartao_entrega" onchange="toggleTrocoField(false)" class="accent-[#FF9F0D]">
+                            <i class="fa-solid fa-credit-card text-blue-400 text-base"></i>
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-white uppercase">Cartão na Entrega</span>
+                                <span class="text-[10px] text-gray-400">Débito ou Crédito na maquininha</span>
+                            </div>
+                        </label>
+
+                        <!-- Opção Dinheiro -->
+                        <label class="flex items-center gap-3 p-3 bg-black/40 rounded-xl cursor-pointer border border-neutral-800 hover:border-[#FF9F0D] transition">
+                            <input type="radio" name="payment-method" value="dinheiro" onchange="toggleTrocoField(true)" class="accent-[#FF9F0D]">
+                            <i class="fa-solid fa-money-bill-wave text-amber-400 text-base"></i>
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-white uppercase">Dinheiro na Entrega</span>
+                                <span class="text-[10px] text-gray-400">Pagamento no momento da entrega</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Campo de Troco (Inicialmente Oculto) -->
+                    <div id="troco-container" class="hidden mt-3 pt-3 border-t border-neutral-800/80">
+                        <label for="checkout-troco" class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">
+                            Troco para quanto?
+                        </label>
+                        <input 
+                            type="text" 
+                            id="checkout-troco" 
+                            placeholder="Ex: R$ 50,00 ou Não preciso de troco"
+                            class="w-full bg-black/60 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#FF9F0D]"
+                        >
+                    </div>
+
+                </div>
+
+                <!-- Botões de Ação -->
+                <div class="pt-3 border-t border-neutral-800 flex items-center justify-end gap-3">
+                    <button type="button" onclick="closeCheckoutModal()" class="px-4 py-2.5 rounded-xl border border-neutral-700 text-gray-300 hover:text-white text-xs font-bold uppercase transition">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="bg-[#FF9F0D] hover:bg-[#e08b00] text-black font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition">
+                        Confirmar Pedido
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DO PIX -->
+    <div id="pix-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#1E1E1E] border border-neutral-800 w-full max-w-md rounded-2xl p-6 text-center shadow-2xl relative">
+            <!-- Botão Fechar -->
+            <button onclick="fecharModalPix()" class="absolute top-4 right-4 text-gray-400 hover:text-white font-bold text-xl cursor-pointer">&times;</button>
+            
+            <h3 class="text-xl font-black text-white mb-1">Pagamento via PIX</h3>
+            <p class="text-xs text-gray-400 mb-4">Escaneie o QR Code abaixo ou copie a chave para pagar.</p>
+
+            <!-- Loader (Aparece enquanto carrega) -->
+            <div id="pix-loading" class="py-12 flex flex-col items-center justify-center">
+                <div class="w-10 h-10 border-4 border-[#FF9F0D] border-t-transparent rounded-full animate-spin mb-3"></div>
+                <span class="text-sm text-gray-300 font-semibold">Gerando QR Code...</span>
+            </div>
+
+            <!-- Conteúdo do Pix (Oculto até a API responder) -->
+            <div id="pix-content" class="hidden flex-col items-center">
+                <!-- Imagem do QR Code -->
+                <div class="bg-white p-3 rounded-xl mb-4 border border-neutral-700">
+                    <img id="pix-qr-image" src="" alt="QR Code Pix" class="w-48 h-48 object-contain">
+                </div>
+
+                <!-- Botão Copia e Cola -->
+                <button onclick="copiarChavePix()" class="w-full bg-[#FF9F0D] hover:bg-[#e08b0b] text-black font-black py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 mb-3 cursor-pointer">
+                    <i class="fa-regular fa-copy"></i>
+                    <span id="btn-copy-text">Copiar Chave PIX</span>
+                </button>
+
+                <p class="text-[11px] text-gray-400">Assim que o pagamento for confirmado pelo banco, seu pedido será enviado automaticamente ao nosso atendimento!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS JS MODULARIZADOS -->
+    <script src="js/ui.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/payment.js"></script>
+    <script src="js/checkout.js"></script>
+
+    <!-- Script para controle de exibição do troco e sincronização do Header e Mobile -->
+    <script>
+        // Sincroniza a contagem nos botões de carrinho sempre que a função renderCart rodar
+        const originalRenderCart = window.renderCart;
+        if (typeof originalRenderCart === 'function') {
+            window.renderCart = function() {
+                originalRenderCart();
+                const countBadgeHeader = document.getElementById('cart-count-header');
+                const countBadgeMobile = document.getElementById('cart-count');
+                const totalCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+                if (countBadgeHeader) countBadgeHeader.textContent = totalCount;
+                if (countBadgeMobile) countBadgeMobile.textContent = totalCount;
+            };
+        }
+    </script>
+</body>
+</html>

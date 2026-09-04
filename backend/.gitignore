@@ -1,0 +1,19 @@
+# Ambient e Dependências do Python (Backend)
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+
+# Arquivos de Configuração e Chaves Secretas
+.env
+*.env
+
+# Arquivos do Sistema Operacional
+.DS_Store
+Thumbs.db
+
+# Configurações de Editores de Código
+.vscode/
+.idea/
