@@ -167,18 +167,26 @@ async function onPlaceChanged() {
 
 function atualizarResumoCheckout() {
     const subtotal = calculateCartTotal();
+    const deliveryType = document.querySelector('input[name="delivery-type"]:checked')?.value;
+    const isDelivery = deliveryType === 'Delivery';
     
     const subtotalSpan = document.getElementById('checkout-summary-subtotal');
     if (subtotalSpan) subtotalSpan.textContent = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
 
     const freteSpan = document.getElementById('checkout-summary-frete');
-    if (freteSpan && isDeliveryAreaValid) {
-        freteSpan.textContent = `R$ ${currentTaxaEntrega.toFixed(2).replace('.', ',')}`;
+    if (freteSpan) {
+        if (isDelivery && isDeliveryAreaValid) {
+            freteSpan.textContent = `R$ ${currentTaxaEntrega.toFixed(2).replace('.', ',')}`;
+        } else if (!isDelivery) {
+            freteSpan.textContent = 'R$ 0,00';
+        }
     }
 
     const totalSpan = document.getElementById('checkout-summary-total');
     if (totalSpan) {
-        const total = isDeliveryAreaValid ? (subtotal + currentTaxaEntrega) : subtotal;
+        const total = isDelivery && isDeliveryAreaValid
+            ? subtotal + currentTaxaEntrega
+            : subtotal;
         totalSpan.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
     }
 }
@@ -209,6 +217,8 @@ function handleDeliveryTypeChange(isDelivery) {
     if (typeof toggleAddressField === 'function') {
         toggleAddressField(isDelivery);
     }
+
+    atualizarResumoCheckout();
 
     const tempoBox = document.getElementById('tempo-espera-dinamico');
     if (tempoBox) {
