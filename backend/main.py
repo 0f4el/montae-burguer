@@ -59,7 +59,6 @@ def criar_pix(data: dict):
         raise HTTPException(status_code=400, detail="O total do pedido deve ser maior que zero.")
 
     name = str(data.get("nome") or "Cliente").strip() or "Cliente"
-    phone = "".join(character for character in str(data.get("telefone") or "") if character.isdigit())
     order_nsu = f"montae-{uuid4().hex}"
 
     payload = {
@@ -76,15 +75,24 @@ def criar_pix(data: dict):
         ],
     }
 
-    if phone:
-        payload["customer"] = {"name": name, "phone_number": f"+55{phone}"}
-
     try:
         response = requests.post(
             f"{INFINITEPAY_API_URL}/links", json=payload, timeout=15
         )
         response.raise_for_status()
         payment_data = response.json()
+    except requests.HTTPError as error:
+        provider_response = error.response
+        provider_detail = provider_response.text[:500].strip() if provider_response is not None else ""
+        print(
+            "InfinitePay recusou a criação do link: "
+            f"status={provider_response.status_code if provider_response is not None else 'desconhecido'} "
+            f"detail={provider_detail}"
+        )
+        raise HTTPException(
+            status_code=502,
+            detail=provider_detail or "A InfinitePay recusou a criação da cobrança.",
+        )
     except requests.RequestException:
         raise HTTPException(
             status_code=502,
@@ -128,6 +136,18 @@ def verificar_pix(data: dict):
         )
         response.raise_for_status()
         payment_data = response.json()
+    except requests.HTTPError as error:
+        provider_response = error.response
+        provider_detail = provider_response.text[:500].strip() if provider_response is not None else ""
+        print(
+            "InfinitePay recusou a consulta do pagamento: "
+            f"status={provider_response.status_code if provider_response is not None else 'desconhecido'} "
+            f"detail={provider_detail}"
+        )
+        raise HTTPException(
+            status_code=502,
+            detail=provider_detail or "A InfinitePay recusou a consulta do pagamento.",
+        )
     except requests.RequestException:
         raise HTTPException(
             status_code=502,

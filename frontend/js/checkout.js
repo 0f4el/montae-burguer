@@ -321,12 +321,14 @@ async function processarPedidoPix(orderDetails) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 total: orderDetails.totalAmount,
-                nome: orderDetails.name,
-                telefone: orderDetails.phone
+                nome: orderDetails.name
             })
         });
 
-        if (!response.ok) throw new Error('Erro ao gerar o PIX.');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || 'Erro ao criar a cobrança.');
+        }
 
         const data = await response.json();
 
@@ -346,7 +348,7 @@ async function processarPedidoPix(orderDetails) {
         window.location.assign(data.checkout_url);
 
     } catch (error) {
-        alert("Erro ao gerar o código PIX. Tente novamente.");
+        alert(error.message || "Erro ao criar a cobrança. Tente novamente.");
         fecharModalPix();
     }
 }
