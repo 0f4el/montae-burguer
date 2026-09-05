@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmando pagamento | Montaê Burguer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="flex min-h-screen items-center justify-center bg-[#121212] p-5 font-sans text-white">
+    <main class="w-full max-w-md rounded-2xl border border-neutral-800 bg-[#1E1E1E] p-7 text-center shadow-2xl">
+        <div class="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#FF9F0D] border-t-transparent"></div>
+        <h1 class="text-xl font-black">Confirmando seu pagamento</h1>
+        <p id="status" class="mt-3 text-sm text-gray-400">Aguarde um instante. Estamos validando a confirmação da InfinitePay.</p>
+        <div id="actions" class="mt-6 hidden gap-3"></div>
+    </main>
+
+    <script>
+        const API_URL = 'https://montae-burguer-api.onrender.com';
+        const STORAGE_KEY = 'montae-pedido-pendente';
+        const statusElement = document.getElementById('status');
+        const actionsElement = document.getElementById('actions');
+
+        function getPendingOrder() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                return saved ? JSON.parse(saved) : null;
+            } catch {
+                return null;
+            }
+        }
+
+        function showAction(label, callback, primary = true) {
+            const button = document.createElement('button');
+            button.textContent = label;
+            button.className = primary
+                ? 'flex-1 rounded-xl bg-[#FF9F0D] px-4 py-3 text-xs font-black text-black'
+                : 'flex-1 rounded-xl border border-neutral-600 px-4 py-3 text-xs font-bold text-gray-200';
+            button.onclick = callback;
+            actionsElement.append(button);
+            actionsElement.classList.remove('hidden');
+            actionsElement.classList.add('flex');
+        }
+
+        async function confirmPayment() {
+            const params = new URLSearchParams(window.location.search);
+            const orderNsu = params.get('order_nsu');
+            const transactionNsu = params.get('transaction_nsu');
+            const slug = params.get('slug');
+            const pendingOrder = getPendingOrder();
+
+            if (!pendingOrder?.payment?.checkoutUrl) {
+                statusElement.textContent = 'Não localizamos este pedido neste navegador. Volte à loja para iniciar ou recuperar seu pedido.';
+                showAction('Voltar à loja', () => window.location.replace('./'));
+                return;
+            }
+
+            if (!orderNsu || !transactionNsu || !slug || orderNsu !== pendingOrder.payment.orderNsu) {
+                statusElement.textContent = 'A InfinitePay não enviou todos os dados de confirmação. Você pode retomar a cobrança para conferir o status.';
+                showAction('Voltar ao pagamento', () => window.location.assign(pendingOrder.payment.checkoutUrl));
+                showAction('Voltar à loja', () => window.location.replace('./'), false);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/verificar-pix`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        order_nsu: orderNsu,
+                        transaction_nsu: transactionNsu,
+                        slug
+                    })
+                });
+
+                if (!response.ok) throw new Error('Não foi possível validar o pagamento.');
+
+                const payment = await response.json();
+                if (!payment.paid) {
+                    statusElement.textContent = 'O pagamento ainda não foi confirmado. Você pode voltar ao checkout e tentar novamente.';
+                    showAction('Voltar ao pagamento', () => window.location.assign(pendingOrder.payment.checkoutUrl));
+                    showAction('Voltar à loja', () => window.location.replace('./'), false);
+                    return;
+                }
+
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    ...pendingOrder,
+                    status: 'pagamento_confirmado',
+                    captureMethod: payment.capture_method,
+                    confirmedAt: new Date().toISOString()
+                }));
+                statusElement.textContent = 'Pagamento confirmado! Você será direcionado para enviar o pedido ao atendimento.';
+                window.location.replace('./?pedido_confirmado=1');
+            } catch (error) {
+                statusElement.textContent = 'Não conseguimos validar o pagamento agora. Seu pedido continua salvo neste navegador.';
+                showAction('Tentar novamente', confirmPayment);
+                showAction('Voltar à loja', () => window.location.replace('./'), false);
+            }
+        }
+
+        confirmPayment();
+    </script>
+</body>
+</html>

@@ -1,15 +1,15 @@
 import os
+from uuid import uuid4
+
+import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-import mercadopago
 
-# Carrega o .env se existir localmente (no Render ele apenas ignora)
 load_dotenv()
 
 app = FastAPI()
 
-# Permite comunicação com o Front-end
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,16 +18,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pega o token do ambiente (Render Environment Variable ou .env local)
-MERCADO_PAGO_TOKEN = os.getenv("MERCADO_PAGO_TOKEN")
-
-if not MERCADO_PAGO_TOKEN:
-    raise RuntimeError("ERRO FATAL: Token do Mercado Pago (MERCADO_PAGO_TOKEN) não configurado!")
-
-print(f"[OK] Token carregado. Primeiros 20 chars: {MERCADO_PAGO_TOKEN[:20]}...")
-
-# Configura o SDK do Mercado Pago
-sdk = mercadopago.SDK(MERCADO_PAGO_TOKEN)
+INFINITEPAY_HANDLE = os.getenv("INFINITEPAY_HANDLE", "").strip()
+FRONTEND_URL = os.getenv("FRONTEND_URL", "").rstrip("/")
+PUBLIC_BACKEND_URL = os.getenv("PUBLIC_BACKEND_URL", "").rstrip("/")
+INFINITEPAY_API_URL = "https://api.checkout.infinitepay.io"
 
 
 @app.get("/")
@@ -35,89 +29,133 @@ def home():
     return {"status": "Servidor do Montaê Burguer rodando com sucesso!"}
 
 
-# 1. ROTA PARA CRIAR O PIX
+def get_infinitepay_config():
+    missing = []
+    if not INFINITEPAY_HANDLE:
+        missing.append("INFINITEPAY_HANDLE")
+    if not FRONTEND_URL:
+        missing.append("FRONTEND_URL")
+    if not PUBLIC_BACKEND_URL:
+        missing.append("PUBLIC_BACKEND_URL")
+
+    if missing:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Configuração da InfinitePay ausente: {', '.join(missing)}",
+        )
+
+
 @app.post("/api/criar-pix")
-async def criar_pix(data: dict):
+def criar_pix(data: dict):
+    """Cria um checkout hospedado pela InfinitePay para o pedido."""
+    get_infinitepay_config()
+
     try:
-        total = float(data.get("total", 0))
-        nome = data.get("nome")
+        total = round(float(data.get("total", 0)), 2)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Valor do pedido inválido.")
 
-        # MP rejeita nomes vazios ou numéricos
-        if not nome or not nome.strip() or nome.strip().isdigit():
-            nome = "Cliente Avulso"
+    if total <= 0:
+        raise HTTPException(status_code=400, detail="O total do pedido deve ser maior que zero.")
 
-        email = data.get("email", "")
-        if not email or "@" not in email or email.endswith("@email.com"):
-            email = "comprador.montae@gmail.com"
+    name = str(data.get("nome") or "Cliente").strip() or "Cliente"
+    phone = "".join(character for character in str(data.get("telefone") or "") if character.isdigit())
+    order_nsu = f"montae-{uuid4().hex}"
 
-        first_name = nome.split()[0]
-        last_name = nome.split()[-1] if len(nome.split()) > 1 else "Avulso"
-
-        payment_data = {
-            "transaction_amount": round(total, 2),
-            "description": f"Pedido Montaê Burguer - {nome}",
-            "payment_method_id": "pix",
-            "payer": {
-                "email": email,
-                "first_name": first_name,
-                "last_name": last_name,
-                "identification": {
-                    "type": "CPF",
-                    "number": "14068608245"
-                }
+    payload = {
+        "handle": INFINITEPAY_HANDLE,
+        "order_nsu": order_nsu,
+        "redirect_url": f"{FRONTEND_URL}/pagamento-sucesso.html",
+        "webhook_url": f"{PUBLIC_BACKEND_URL}/api/webhooks/infinitepay",
+        "items": [
+            {
+                "quantity": 1,
+                "price": int(round(total * 100)),
+                "description": f"Pedido Montaê Burguer - {name}",
             }
-        }
+        ],
+    }
 
-        print(f"[DEBUG] Enviando para MP: total={total}, nome={nome}, email={email}")
+    if phone:
+        payload["customer"] = {"name": name, "phone_number": f"+55{phone}"}
 
-        payment_response = sdk.payment().create(payment_data)
-
-        if payment_response["status"] not in [200, 201]:
-            print("Erro retornado pelo Mercado Pago:", payment_response["response"])
-            raise HTTPException(
-                status_code=400,
-                detail=payment_response["response"].get("message", "Erro ao comunicar com o Mercado Pago")
-            )
-
-        payment = payment_response["response"]
-
-        return {
-            "payment_id": payment["id"],
-            "qr_code_base64": payment["point_of_interaction"]["transaction_data"]["qr_code_base64"],
-            "qr_code_copia_cola": payment["point_of_interaction"]["transaction_data"]["qr_code"]
-        }
-
-    except Exception as e:
-        print("ERRO INTERNO NO SERVIDOR:", str(e))
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# 2. ROTA PARA VERIFICAR STATUS DO PAGAMENTO PELO ID (REAL)
-@app.get("/api/verificar-pix/{payment_id}")
-async def verificar_pix(payment_id: str):
     try:
-        payment_response = sdk.payment().get(payment_id)
-        payment_info = payment_response.get("response", {})
-        return {"status": payment_info.get("status")}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        response = requests.post(
+            f"{INFINITEPAY_API_URL}/links", json=payload, timeout=15
+        )
+        response.raise_for_status()
+        payment_data = response.json()
+    except requests.RequestException:
+        raise HTTPException(
+            status_code=502,
+            detail="Não foi possível criar a cobrança na InfinitePay.",
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=502,
+            detail="A InfinitePay retornou uma resposta inválida.",
+        )
+
+    checkout_url = payment_data.get("url")
+    if not checkout_url:
+        raise HTTPException(
+            status_code=502,
+            detail="A InfinitePay não retornou o link de pagamento.",
+        )
+
+    return {"checkout_url": checkout_url, "order_nsu": order_nsu}
 
 
-# 3. ROTA DE WEBHOOK
-@app.post("/api/webhooks/mercadopago")
-async def webhook_mercadopago(request: Request):
+@app.post("/api/verificar-pix")
+def verificar_pix(data: dict):
+    """Confirma no provedor o pagamento recebido no retorno do checkout."""
+    get_infinitepay_config()
+
+    fields = ("order_nsu", "transaction_nsu", "slug")
+    if any(not str(data.get(field) or "").strip() for field in fields):
+        raise HTTPException(status_code=400, detail="Dados de confirmação incompletos.")
+
+    payload = {
+        "handle": INFINITEPAY_HANDLE,
+        "order_nsu": data["order_nsu"],
+        "transaction_nsu": data["transaction_nsu"],
+        "slug": data["slug"],
+    }
+
     try:
-        query_params = request.query_params
-        topic = query_params.get("topic") or query_params.get("type")
-        payment_id = query_params.get("data.id") or query_params.get("id")
+        response = requests.post(
+            f"{INFINITEPAY_API_URL}/payment_check", json=payload, timeout=15
+        )
+        response.raise_for_status()
+        payment_data = response.json()
+    except requests.RequestException:
+        raise HTTPException(
+            status_code=502,
+            detail="Não foi possível consultar o pagamento na InfinitePay.",
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=502,
+            detail="A InfinitePay retornou uma resposta inválida.",
+        )
 
-        if topic == "payment" and payment_id:
-            payment_response = sdk.payment().get(payment_id)
-            payment_info = payment_response.get("response", {})
-            if payment_info.get("status") == "approved":
-                print(f"Pagamento {payment_id} APROVADO via Webhook!")
+    return {
+        "paid": payment_data.get("paid") is True,
+        "capture_method": payment_data.get("capture_method"),
+    }
 
-        return {"status": "ok"}
-    except Exception as e:
-        print("Erro no Webhook:", str(e))
-        return {"status": "error"}, 500
+
+@app.post("/api/webhooks/infinitepay")
+async def webhook_infinitepay(request: Request):
+    """Recebe a confirmação assíncrona da InfinitePay e responde rapidamente."""
+    try:
+        payload = await request.json()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Webhook inválido.")
+
+    order_nsu = payload.get("order_nsu")
+    transaction_nsu = payload.get("transaction_nsu")
+    if order_nsu and transaction_nsu:
+        print(f"Pagamento InfinitePay confirmado para o pedido {order_nsu}.")
+
+    return {"status": "ok"}

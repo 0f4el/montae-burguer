@@ -721,8 +721,8 @@
                             <input type="radio" name="payment-method" value="pix" checked onchange="toggleTrocoField(false)" class="accent-[#FF9F0D]">
                             <i class="fa-brands fa-[#FF9F0D] fa-pix text-emerald-400 text-base"></i>
                             <div class="flex flex-col">
-                                <span class="text-xs font-bold text-white uppercase">PIX (Mercado Pago)</span>
-                                <span class="text-[10px] text-gray-400">Aprovação imediata via QR Code</span>
+                                <span class="text-xs font-bold text-white uppercase">PIX (InfinitePay)</span>
+                                <span class="text-[10px] text-gray-400">Pagamento seguro no checkout da InfinitePay</span>
                             </div>
                         </label>
 
@@ -778,32 +778,13 @@
     <!-- MODAL DO PIX -->
     <div id="pix-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-[#1E1E1E] border border-neutral-800 w-full max-w-md rounded-2xl p-6 text-center shadow-2xl relative">
-            <!-- Botão Fechar -->
-            <button onclick="fecharModalPix()" class="absolute top-4 right-4 text-gray-400 hover:text-white font-bold text-xl cursor-pointer">&times;</button>
-            
-            <h3 class="text-xl font-black text-white mb-1">Pagamento via PIX</h3>
-            <p class="text-xs text-gray-400 mb-4">Escaneie o QR Code abaixo ou copie a chave para pagar.</p>
+            <h3 class="text-xl font-black text-white mb-1">Redirecionando para pagamento</h3>
+            <p class="text-xs text-gray-400 mb-4">Você será direcionado ao checkout seguro da InfinitePay.</p>
 
             <!-- Loader (Aparece enquanto carrega) -->
             <div id="pix-loading" class="py-12 flex flex-col items-center justify-center">
                 <div class="w-10 h-10 border-4 border-[#FF9F0D] border-t-transparent rounded-full animate-spin mb-3"></div>
-                <span class="text-sm text-gray-300 font-semibold">Gerando QR Code...</span>
-            </div>
-
-            <!-- Conteúdo do Pix (Oculto até a API responder) -->
-            <div id="pix-content" class="hidden flex-col items-center">
-                <!-- Imagem do QR Code -->
-                <div class="bg-white p-3 rounded-xl mb-4 border border-neutral-700">
-                    <img id="pix-qr-image" src="" alt="QR Code Pix" class="w-48 h-48 object-contain">
-                </div>
-
-                <!-- Botão Copia e Cola -->
-                <button onclick="copiarChavePix()" class="w-full bg-[#FF9F0D] hover:bg-[#e08b0b] text-black font-black py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 mb-3 cursor-pointer">
-                    <i class="fa-regular fa-copy"></i>
-                    <span id="btn-copy-text">Copiar Chave PIX</span>
-                </button>
-
-                <p class="text-[11px] text-gray-400">Assim que o pagamento for confirmado pelo banco, seu pedido será enviado automaticamente ao nosso atendimento!</p>
+                <span class="text-sm text-gray-300 font-semibold">Criando cobrança...</span>
             </div>
         </div>
     </div>

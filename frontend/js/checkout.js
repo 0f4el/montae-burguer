@@ -1,6 +1,7 @@
-// --- LÓGICA DE CHECKOUT E INTEGRAÇÃO MERCADO PAGO / WHATSAPP ---
+// --- LÓGICA DE CHECKOUT E INTEGRAÇÃO INFINITEPAY / WHATSAPP ---
 
-let pixCheckInterval = null;
+const API_URL = 'https://montae-burguer-api.onrender.com';
+const PEDIDO_PENDENTE_STORAGE_KEY = 'montae-pedido-pendente';
 
 // Configuração de Entrega e Bairros
 const ORIGEM_BURGER = "Dom Bosco, Belo Horizonte - MG"; 
@@ -275,27 +276,53 @@ async function handleCheckoutSubmit(event) {
     }
 }
 
-// Gera o QR Code PIX chamando o Backend Python
+// Salva o pedido antes do redirecionamento para permitir retomá-lo depois.
+function salvarPedidoPendente(pedido) {
+    try {
+        localStorage.setItem(PEDIDO_PENDENTE_STORAGE_KEY, JSON.stringify(pedido));
+    } catch (error) {
+        console.warn('Não foi possível salvar o pedido pendente no navegador.', error);
+    }
+}
+
+function obterPedidoPendente() {
+    try {
+        const pedido = localStorage.getItem(PEDIDO_PENDENTE_STORAGE_KEY);
+        return pedido ? JSON.parse(pedido) : null;
+    } catch (error) {
+        console.warn('Não foi possível recuperar o pedido pendente.', error);
+        return null;
+    }
+}
+
+function limparPedidoPendente() {
+    localStorage.removeItem(PEDIDO_PENDENTE_STORAGE_KEY);
+}
+
+// Cria um link de checkout da InfinitePay e redireciona o cliente para pagar.
 async function processarPedidoPix(orderDetails) {
     const modal = document.getElementById('pix-modal');
     const loading = document.getElementById('pix-loading');
-    const content = document.getElementById('pix-content');
 
     if (modal) modal.classList.remove('hidden');
     if (loading) loading.classList.remove('hidden');
-    if (content) {
-        content.classList.add('hidden');
-        content.classList.remove('flex');
-    }
+
+    const pedidoPendente = {
+        status: 'criando_pagamento',
+        createdAt: new Date().toISOString(),
+        orderDetails,
+        cart: JSON.parse(JSON.stringify(cart))
+    };
+    salvarPedidoPendente(pedidoPendente);
 
     try {
-        const response = await fetch('https://montae-burguer-api.onrender.com/api/criar-pix', {
+        const response = await fetch(`${API_URL}/api/criar-pix`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 total: orderDetails.totalAmount,
                 nome: orderDetails.name,
-                email: "comprador.montae@gmail.com"
+                telefone: orderDetails.phone
             })
         });
 
@@ -303,18 +330,20 @@ async function processarPedidoPix(orderDetails) {
 
         const data = await response.json();
 
-        const qrImg = document.getElementById('pix-qr-image');
-        if (qrImg) qrImg.src = `data:image/png;base64,${data.qr_code_base64}`;
-        
-        chavePixCopiaCola = data.qr_code_copia_cola;
-
-        if (loading) loading.classList.add('hidden');
-        if (content) {
-            content.classList.remove('hidden');
-            content.classList.add('flex');
+        if (!data.checkout_url || !data.order_nsu) {
+            throw new Error('Resposta de pagamento incompleta.');
         }
 
-        iniciarVerificacaoPagamento(data.payment_id, orderDetails);
+        salvarPedidoPendente({
+            ...pedidoPendente,
+            status: 'aguardando_pagamento',
+            payment: {
+                orderNsu: data.order_nsu,
+                checkoutUrl: data.checkout_url
+            }
+        });
+
+        window.location.assign(data.checkout_url);
 
     } catch (error) {
         alert("Erro ao gerar o código PIX. Tente novamente.");
@@ -322,28 +351,59 @@ async function processarPedidoPix(orderDetails) {
     }
 }
 
-// Checa o status do pagamento no servidor
-function iniciarVerificacaoPagamento(paymentId, orderDetails) {
-    if (pixCheckInterval) clearInterval(pixCheckInterval);
+function mostrarRecuperacaoPedido() {
+    if (new URLSearchParams(window.location.search).has('pedido_confirmado')) return;
 
-    pixCheckInterval = setInterval(async () => {
-        try {
-            const response = await fetch(`https://montae-burguer-api.onrender.com/api/verificar-pix/${paymentId}`);
-            if (response.ok) {
-                const data = await response.json();
-                
-                if (data.status === 'approved') {
-                    clearInterval(pixCheckInterval);
-                    fecharModalPix();
-                    
-                    orderDetails.paymentMethod = "PIX (PAGO E CONFIRMADO)";
-                    finalizarERedirecionarWhatsApp(orderDetails);
-                }
-            }
-        } catch (err) {
-            console.error("Aguardando confirmação do pagamento...", err);
+    const pedido = obterPedidoPendente();
+    if (!pedido?.orderDetails || !Array.isArray(pedido.cart) || pedido.status === 'concluido') return;
+
+    cart = pedido.cart;
+    renderCart();
+
+    const notification = document.createElement('div');
+    notification.className = 'fixed bottom-4 left-4 right-4 z-50 mx-auto flex max-w-lg flex-col gap-3 rounded-xl border border-[#FF9F0D] bg-neutral-900 p-4 text-sm text-white shadow-2xl sm:flex-row sm:items-center sm:justify-between';
+    notification.innerHTML = '<span>Você tem um pedido pendente. O carrinho foi restaurado.</span>';
+
+    const actions = document.createElement('div');
+    actions.className = 'flex gap-2';
+    const continueButton = document.createElement('button');
+    continueButton.className = 'rounded-lg bg-[#FF9F0D] px-3 py-2 text-xs font-black text-black';
+    continueButton.textContent = pedido.payment?.checkoutUrl ? 'Continuar pagamento' : 'Revisar pedido';
+    continueButton.onclick = () => {
+        if (pedido.payment?.checkoutUrl) {
+            window.location.assign(pedido.payment.checkoutUrl);
+        } else {
+            openCheckoutModal();
         }
-    }, 3000);
+    };
+
+    const discardButton = document.createElement('button');
+    discardButton.className = 'rounded-lg border border-neutral-600 px-3 py-2 text-xs font-bold text-gray-300';
+    discardButton.textContent = 'Descartar';
+    discardButton.onclick = () => {
+        limparPedidoPendente();
+        notification.remove();
+    };
+
+    actions.append(continueButton, discardButton);
+    notification.append(actions);
+    document.body.append(notification);
+}
+
+function concluirPedidoRetornado() {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('pedido_confirmado')) return;
+
+    const pedido = obterPedidoPendente();
+    if (!pedido?.orderDetails || !Array.isArray(pedido.cart) || pedido.status !== 'pagamento_confirmado') return;
+
+    history.replaceState({}, document.title, window.location.pathname);
+    cart = pedido.cart;
+    renderCart();
+    pedido.orderDetails.paymentMethod = pedido.captureMethod === 'pix'
+        ? 'PIX (PAGO E CONFIRMADO)'
+        : 'PAGAMENTO ONLINE (PAGO E CONFIRMADO)';
+    finalizarERedirecionarWhatsApp(pedido.orderDetails);
 }
 
 // Monta a mensagem final formatada com os itens do combo e taxa de entrega
@@ -395,4 +455,10 @@ function finalizarERedirecionarWhatsApp(details) {
 
     cart = [];
     renderCart();
+    limparPedidoPendente();
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    concluirPedidoRetornado();
+    mostrarRecuperacaoPedido();
+});
