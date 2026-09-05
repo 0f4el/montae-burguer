@@ -640,17 +640,23 @@
                     <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">Tipo de Entrega *</label>
                     <div class="grid grid-cols-2 gap-3">
                         <label class="cursor-pointer">
-                            <input type="radio" name="delivery-type" value="Delivery" checked onchange="toggleAddressField(true)" class="peer hidden">
+                            <input type="radio" name="delivery-type" value="Delivery" checked onchange="handleDeliveryTypeChange(true)" class="peer hidden">
                             <div class="border-2 border-neutral-800 bg-black/40 text-gray-400 peer-checked:border-[#FF9F0D] peer-checked:text-[#FF9F0D] peer-checked:bg-[#FF9F0D]/10 rounded-xl p-3 text-center transition font-bold text-xs uppercase">
                                 <i class="fa-solid fa-motorcycle text-sm block mb-1"></i> Delivery
                             </div>
                         </label>
                         <label class="cursor-pointer">
-                            <input type="radio" name="delivery-type" value="Retirada" onchange="toggleAddressField(false)" class="peer hidden">
+                            <input type="radio" name="delivery-type" value="Retirada" onchange="handleDeliveryTypeChange(false)" class="peer hidden">
                             <div class="border-2 border-neutral-800 bg-black/40 text-gray-400 peer-checked:border-[#FF9F0D] peer-checked:text-[#FF9F0D] peer-checked:bg-[#FF9F0D]/10 rounded-xl p-3 text-center transition font-bold text-xs uppercase">
                                 <i class="fa-solid fa-store text-sm block mb-1"></i> Retirada
                             </div>
                         </label>
+                    </div>
+
+                    <!-- Tempo Estimado Dinâmico -->
+                    <div id="tempo-espera-dinamico" class="mt-2 bg-[#FF9F0D]/10 border border-[#FF9F0D]/30 rounded-xl p-2.5 flex items-center gap-2 text-xs text-gray-200">
+                        <i class="fa-solid fa-clock text-[#FF9F0D]"></i>
+                        <span>Tempo estimado para <strong>Delivery</strong>: <strong class="text-[#FF9F0D]">60 - 80 min</strong></span>
                     </div>
                 </div>
 

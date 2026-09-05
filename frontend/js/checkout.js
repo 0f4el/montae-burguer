@@ -203,6 +203,29 @@ window.resetDeliveryState = function() {
     atualizarResumoCheckout();
 };
 
+// Atualiza a frase de tempo de espera e alterna o campo de endereço
+function handleDeliveryTypeChange(isDelivery) {
+    // Chama a função existente que esconde/exibe o campo de endereço
+    if (typeof toggleAddressField === 'function') {
+        toggleAddressField(isDelivery);
+    }
+
+    const tempoBox = document.getElementById('tempo-espera-dinamico');
+    if (tempoBox) {
+        if (isDelivery) {
+            tempoBox.innerHTML = `
+                <i class="fa-solid fa-clock text-[#FF9F0D]"></i>
+                <span>Tempo estimado para <strong>Delivery</strong>: <strong class="text-[#FF9F0D]">60 - 80 min</strong></span>
+            `;
+        } else {
+            tempoBox.innerHTML = `
+                <i class="fa-solid fa-clock text-[#FF9F0D]"></i>
+                <span>Tempo estimado para <strong>Retirada</strong>: <strong class="text-[#FF9F0D]">30 min</strong></span>
+            `;
+        }
+    }
+}
+
 // Função principal disparada pelo formulário de checkout
 async function handleCheckoutSubmit(event) {
     event.preventDefault();
