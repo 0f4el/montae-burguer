@@ -112,6 +112,19 @@ function toggleTrocoField(isDinheiro) {
 
 // Envio do formulário com novo formato dos adicionais
 function submitBurgerForm() {
+    // Verificação de funcionamento da cozinha
+    if (typeof verificarStatusRestaurante === 'function') {
+        const status = verificarStatusRestaurante();
+        if (!status.estaAberto) {
+            if (typeof abrirModalHorarios === 'function') {
+                abrirModalHorarios();
+            } else {
+                alert(`O restaurante está fechado no momento.\n${status.proximaAbertura}`);
+            }
+            return;
+        }
+    }
+
     const form = document.getElementById('burger-builder-form');
     if (!form) return;
 
@@ -213,7 +226,19 @@ function renderCart() {
         return;
     }
 
-    if (btnCheckout) btnCheckout.disabled = false;
+    const statusLoja = typeof verificarStatusRestaurante === 'function' ? verificarStatusRestaurante() : { estaAberto: true };
+
+    if (btnCheckout) {
+        if (!statusLoja.estaAberto) {
+            btnCheckout.disabled = true;
+            btnCheckout.className = "w-full py-3.5 rounded-2xl bg-neutral-800 text-neutral-400 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-not-allowed border border-neutral-700";
+            btnCheckout.innerHTML = `<i class="fa-solid fa-lock text-xs text-red-400"></i> <span>Restaurante Fechado</span>`;
+        } else {
+            btnCheckout.disabled = false;
+            btnCheckout.className = "w-full py-3.5 rounded-2xl bg-[#FF9F0D] hover:bg-[#E08800] text-black text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition duration-200 shadow-lg shadow-[#FF9F0D]/20 active:scale-95";
+            btnCheckout.innerHTML = `<span>Finalizar Pedido</span> <i class="fa-solid fa-arrow-right text-xs"></i>`;
+        }
+    }
 
     let itemsHTML = '';
     cart.forEach((item) => {
@@ -267,6 +292,19 @@ function renderCart() {
 
 function openCheckoutModal() {
     if (cart.length === 0) return;
+
+    // Verificação de funcionamento
+    if (typeof verificarStatusRestaurante === 'function') {
+        const status = verificarStatusRestaurante();
+        if (!status.estaAberto) {
+            if (typeof abrirModalHorarios === 'function') {
+                abrirModalHorarios();
+            } else {
+                alert(`O restaurante está fechado no momento.\n${status.proximaAbertura}`);
+            }
+            return;
+        }
+    }
 
     closeCartDrawer();
 

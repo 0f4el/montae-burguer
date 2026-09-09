@@ -241,6 +241,20 @@ let isSubmittingOrder = false;
 // Função principal disparada pelo formulário de checkout
 async function handleCheckoutSubmit(event) {
     event.preventDefault();
+
+    // Verificação de funcionamento do restaurante
+    if (typeof verificarStatusRestaurante === 'function') {
+        const status = verificarStatusRestaurante();
+        if (!status.estaAberto) {
+            if (typeof abrirModalHorarios === 'function') {
+                abrirModalHorarios();
+            } else {
+                alert(`O restaurante está fechado no momento.\n${status.proximaAbertura}`);
+            }
+            return;
+        }
+    }
+
     if (isSubmittingOrder) return;
     isSubmittingOrder = true;
 

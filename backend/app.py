@@ -56,6 +56,48 @@ CORS(app, supports_credentials=True)
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "montaeadmin")
 
 
+def restaurante_aberto(dt=None):
+    """
+    Verifica se o restaurante está aberto com base no fuso horário de Brasília (UTC-3):
+    Segunda: 18:30 às 23:00
+    Terça-feira: Fechado
+    Quarta: 18:30 às 23:00
+    Quinta: 18:30 às 23:00
+    Sexta: 18:30 às 00:00 (23:59:59)
+    Sábado: 18:30 às 00:00 (23:59:59)
+    Domingo: 18:30 às 23:00
+    """
+    if os.getenv("IGNORAR_HORARIO_FUNCIONAMENTO", "false").lower() in ("true", "1", "yes"):
+        return True, ""
+
+    now_utc = dt or agora_utc()
+    fuso_br = timezone(timedelta(hours=-3))
+    agora_br = now_utc.astimezone(fuso_br)
+    dia_semana = agora_br.weekday()  # Python: 0=Seg, 1=Ter, 2=Qua, 3=Qui, 4=Sex, 5=Sáb, 6=Dom
+    minutos = agora_br.hour * 60 + agora_br.minute
+
+    # 0=Seg, 2=Qua, 3=Qui, 6=Dom: 18:30 (1110) até 23:00 (1380)
+    # 4=Sex, 5=Sáb: 18:30 (1110) até 24:00 (1440)
+    # 1=Terça: Fechado
+    aberto = False
+    if dia_semana in (0, 2, 3, 6):
+        aberto = (1110 <= minutos <= 1380)
+    elif dia_semana in (4, 5):
+        aberto = (1110 <= minutos <= 1440)
+    else:
+        aberto = False
+
+    if not aberto:
+        mensagem = (
+            "O restaurante está fechado no momento. "
+            "Horário de atendimento: Seg, Qua, Qui e Dom das 18:30 às 23:00 | "
+            "Sex e Sáb das 18:30 às 00:00 | Terça-feira: Fechado."
+        )
+        return False, mensagem
+
+    return True, ""
+
+
 def expirar_pedidos_pendentes_antigos(minutos=60):
     """
     Marca como 'expirado' pedidos com status 'aguardando_pagamento'
@@ -249,8 +291,21 @@ def health():
     return {"status": "Servidor Flask do Montaê Burguer rodando com sucesso!"}
 
 
+@app.get("/api/status-loja")
+def status_loja():
+    aberto, msg = restaurante_aberto()
+    return jsonify({
+        "aberto": aberto,
+        "mensagem": msg if not aberto else "Restaurante aberto para pedidos.",
+    })
+
+
 @app.post("/api/pedidos")
 def criar_pedido():
+    aberto, msg_fechado = restaurante_aberto()
+    if not aberto:
+        return erro(msg_fechado)
+
     data = request.get_json(silent=True) or {}
     nome = str(data.get("nome") or data.get("name") or "").strip()
     whatsapp = str(data.get("whatsapp") or data.get("phone") or "").strip()

@@ -2,6 +2,18 @@
 
 // Abre/Exibe o construtor
 function revealAndScrollBuilder() {
+    if (typeof verificarStatusRestaurante === 'function') {
+        const status = verificarStatusRestaurante();
+        if (!status.estaAberto) {
+            if (typeof abrirModalHorarios === 'function') {
+                abrirModalHorarios();
+            } else {
+                alert(`O restaurante está fechado no momento.\n${status.proximaAbertura}`);
+            }
+            return;
+        }
+    }
+
     const builderSection = document.getElementById('construtor');
     if (!builderSection) return;
 
