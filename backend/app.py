@@ -36,10 +36,16 @@ app = Flask(
     instance_path=str(INSTANCE_DIR),
 )
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "troque-esta-chave-em-producao")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+
+database_url = os.getenv(
     "DATABASE_URL",
     "sqlite:///" + (INSTANCE_DIR / "montae.db").as_posix(),
 )
+# Render fornece URLs do Postgres iniciando com postgres://, mas o SQLAlchemy 1.4+ exige postgresql://
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
