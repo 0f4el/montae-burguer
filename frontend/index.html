@@ -41,6 +41,17 @@
 
         @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } } .animate-shake { animation: shake 0.3s ease-in-out; }
 
+        /* Oculta as setas de incremento/decremento em inputs numéricos */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
     </style>
 </head>
 <body class="bg-[#121212] text-gray-100 font-sans pb-16 md:pb-0">
@@ -92,9 +103,9 @@
                 </button>
 
                 <!-- NOVO BOTÃO: Acompanhar Pedido -->
-                <a href="https://wa.me/+5531990081997?text=Ol%C3%A1!%20Gostaria%20de%20saber%20o%20status%20do%20meu%20pedido." target="_blank" class="w-full sm:w-auto bg-neutral-900/90 hover:bg-neutral-800 text-white font-bold px-5 py-2.5 rounded-xl shadow-xl transition border border-neutral-700 hover:border-[#FF9F0D] cursor-pointer flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
-                    <i class="fa-brands fa-whatsapp text-emerald-500 text-base"></i> Acompanhar Pedido
-                </a>
+                <button type="button" onclick="abrirModalAcompanhar()" class="w-full sm:w-auto bg-neutral-900/90 hover:bg-neutral-800 text-white font-bold px-5 py-2.5 rounded-xl shadow-xl transition border border-neutral-700 hover:border-[#FF9F0D] cursor-pointer flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
+                    <i class="fa-solid fa-receipt text-[#FF9F0D] text-base"></i> Acompanhar Pedido
+                </button>
             </div>
         </div>
     </section>
@@ -533,7 +544,14 @@
                     </h3>
                     <p class="text-gray-400">Rua Mário Soares, 23 - Dom Bosco</p>
                     <p class="text-gray-400">Belo Horizonte - MG</p>
-                    <p class="text-gray-400 mt-1">Delivery via WhatsApp</p>
+                    <p class="text-gray-400 mt-1">Delivery via WhatsApp:
+                        <a href="https://wa.me/553190081997" target="_blank" rel="noopener noreferrer" class="hover:text-[#FF9F0D] text-gray-300 transition"> (31) 9008-1997</a>
+                    </p>
+                    <p class="text-gray-400 mt-1">Instagram:
+                        <a href="https://www.instagram.com/montae.burguer/" target="_blank" rel="noopener noreferrer" class="hover:text-[#FF9F0D] text-gray-300 transition inline-flex items-center gap-1 font-bold">
+                            <i class="fa-brands fa-instagram text-pink-500"></i> @montae.burguer
+                        </a>
+                    </p>
                 </div>
             </div>
         </div>
@@ -602,7 +620,7 @@
                 <i class="fa-solid fa-bag-shopping text-[#FF9F0D] text-lg"></i>
                 <h3 class="text-base font-black text-white uppercase tracking-wider">Seu Pedido</h3>
             </div>
-            <button onclick="closeCartDrawer()" class="text-gray-400 hover:text-white p-2 rounded-lg transition cursor-pointer">
+            <button onclick="closeCartDrawer()" class="text-gray-400 hover:text-white p-2 rounded-lg transition cursor-pointer" title="Fechar carrinho" aria-label="Fechar carrinho">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
         </div>
@@ -634,7 +652,7 @@
                 <h3 class="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
                     <i class="fa-solid fa-receipt text-[#FF9F0D]"></i> Finalizar Pedido
                 </h3>
-                <button onclick="closeCheckoutModal()" class="text-neutral-500 hover:text-white transition">
+                <button onclick="closeCheckoutModal()" class="text-neutral-500 hover:text-white transition" title="Fechar checkout" aria-label="Fechar checkout">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
@@ -824,6 +842,65 @@
         </div>
     </div>
 
+    <div id="tracking-modal-backdrop" class="fixed inset-0 bg-black/70 z-50 hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
+        <div id="tracking-modal" class="bg-neutral-900 border border-neutral-800 w-full max-w-lg rounded-3xl p-6 shadow-2xl transform scale-95 transition-transform duration-300 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-neutral-800 pb-4 mb-4">
+                <h3 class="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-receipt text-[#FF9F0D]"></i> Acompanhar Pedido
+                </h3>
+                <button onclick="fecharModalAcompanhar()" class="text-neutral-500 hover:text-white transition" title="Fechar acompanhamento" aria-label="Fechar acompanhamento">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="buscarPedidoAcompanhamento(event)" class="space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div class="sm:col-span-1">
+                        <label for="tracking-type" class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">Buscar por</label>
+                        <select id="tracking-type" onchange="alternarTipoAcompanhamento()"
+                            class="w-full bg-black/60 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#FF9F0D] cursor-pointer">
+                            <option value="whatsapp" selected>WhatsApp</option>
+                            <option value="id">ID do Pedido</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label id="tracking-query-label" for="tracking-query" class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">Número do WhatsApp</label>
+                        <input id="tracking-query" type="tel" maxlength="16" required placeholder="Ex: (31) 9 9999 9999" oninput="handleTrackingInput(event)"
+                            class="w-full bg-black/60 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#FF9F0D]">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-[#FF9F0D] hover:bg-[#E08800] text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider cursor-pointer">
+                    Buscar pedido
+                </button>
+            </form>
+            <div id="tracking-results" class="mt-4 space-y-3"></div>
+
+            <div class="mt-5 pt-4 border-t border-neutral-800 text-center">
+                <a href="https://wa.me/553190081997?text=Ol%C3%A1!%20Gostaria%20de%20falar%20com%20o%20atendimento%20sobre%20meu%20pedido." 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 hover:text-emerald-300 font-bold py-2.5 px-4 text-xs uppercase tracking-wider transition">
+                    <i class="fa-brands fa-whatsapp text-base"></i> Conversar com Atendimento
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="order-success-backdrop" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#1E1E1E] border border-neutral-800 w-full max-w-md rounded-2xl p-6 text-center shadow-2xl">
+            <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+                <i class="fa-solid fa-circle-check text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-black text-white">Pedido recebido!</h3>
+            <p class="mt-2 text-sm text-gray-400">Guarde o número do seu pedido para acompanhar o status.</p>
+            <p id="order-success-id" class="mt-3 text-3xl font-black text-[#FF9F0D]">#</p>
+            <p class="mt-1 text-xs text-gray-400">Status: <span id="order-success-status">Aguardando aprovação</span></p>
+            <div class="mt-5 flex gap-2">
+                <button type="button" onclick="fecharModalPedidoRecebido(); abrirModalAcompanhar();" class="flex-1 rounded-xl border border-neutral-700 px-4 py-2.5 text-xs font-bold uppercase text-gray-200">Acompanhar</button>
+                <button type="button" onclick="fecharModalPedidoRecebido()" class="flex-1 rounded-xl bg-[#FF9F0D] px-4 py-2.5 text-xs font-black uppercase text-black">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- API -->
      <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAS_3bXiY07Ql2nSAMGa6gpzUsrImBrAEE&libraries=places" async defer></script>
 
@@ -831,6 +908,7 @@
     <script src="js/ui.js"></script>
     <script src="js/cart.js"></script>
     <script src="js/payment.js"></script>
+    <script src="js/tracking.js"></script>
     <script src="js/checkout.js"></script>
 
     <!-- Script para controle de exibição do troco e sincronização do Header e Mobile -->

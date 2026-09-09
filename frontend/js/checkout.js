@@ -1,6 +1,6 @@
 // --- LÓGICA DE CHECKOUT E INTEGRAÇÃO INFINITEPAY / WHATSAPP ---
 
-const API_URL = 'https://montae-burguer-api.onrender.com';
+const API_URL = '';
 const PEDIDO_PENDENTE_STORAGE_KEY = 'montae-pedido-pendente';
 
 // Configuração de Entrega e Bairros
@@ -236,9 +236,13 @@ function handleDeliveryTypeChange(isDelivery) {
     }
 }
 
+let isSubmittingOrder = false;
+
 // Função principal disparada pelo formulário de checkout
 async function handleCheckoutSubmit(event) {
     event.preventDefault();
+    if (isSubmittingOrder) return;
+    isSubmittingOrder = true;
 
     const name = document.getElementById('checkout-name')?.value || '';
     const phoneInput = document.getElementById('checkout-phone');
@@ -247,7 +251,10 @@ async function handleCheckoutSubmit(event) {
     const notes = document.getElementById('checkout-notes')?.value || '';
     const troco = document.getElementById('checkout-troco')?.value || '';
 
-    if (!phoneInput) return;
+    if (!phoneInput) {
+        isSubmittingOrder = false;
+        return;
+    }
 
     const rawPhone = phoneInput.value.replace(/\D/g, "");
     phoneInput.setCustomValidity("");
@@ -256,6 +263,7 @@ async function handleCheckoutSubmit(event) {
     if (rawPhone.length !== 11 || rawPhone[2] !== '9') {
         phoneInput.setCustomValidity("Insira um WhatsApp válido no formato (DDD) 9 XXXX XXXX.");
         phoneInput.reportValidity();
+        isSubmittingOrder = false;
         return;
     }
 
@@ -266,10 +274,12 @@ async function handleCheckoutSubmit(event) {
     if (deliveryType === 'Delivery') {
         if (!currentFormattedAddress) {
             alert("Por favor, selecione um endereço da busca do Google antes de continuar.");
+            isSubmittingOrder = false;
             return;
         }
         if (!isDeliveryAreaValid) {
             alert("Infelizmente o endereço selecionado está fora da nossa área de entrega via motoboy.");
+            isSubmittingOrder = false;
             return;
         }
 
@@ -300,12 +310,10 @@ async function handleCheckoutSubmit(event) {
     };
 
     closeCheckoutModal();
-
-    // Redirecionamento por forma de pagamento
-    if (paymentMethod === 'pix') {
-        processarPedidoPix(orderDetails);
-    } else {
-        finalizarERedirecionarWhatsApp(orderDetails);
+    try {
+        await enviarPedidoParaBackend(orderDetails);
+    } finally {
+        isSubmittingOrder = false;
     }
 }
 
@@ -332,16 +340,30 @@ function limparPedidoPendente() {
     localStorage.removeItem(PEDIDO_PENDENTE_STORAGE_KEY);
 }
 
-// Cria um link de checkout da InfinitePay e redireciona o cliente para pagar.
-async function processarPedidoPix(orderDetails) {
+function payloadPedido(orderDetails) {
+    return {
+        nome: orderDetails.name,
+        whatsapp: orderDetails.phone,
+        forma_entrega: orderDetails.deliveryType,
+        endereco: orderDetails.address,
+        forma_pagamento: orderDetails.paymentMethod,
+        observacao: orderDetails.notes,
+        troco: orderDetails.troco,
+        subtotal: orderDetails.subtotal,
+        taxa_entrega: orderDetails.taxaEntrega,
+        total: orderDetails.totalAmount,
+        hamburgueres: cart
+    };
+}
+
+async function enviarPedidoParaBackend(orderDetails) {
     const modal = document.getElementById('pix-modal');
     const loading = document.getElementById('pix-loading');
-
     if (modal) modal.classList.remove('hidden');
     if (loading) loading.classList.remove('hidden');
 
     const pedidoPendente = {
-        status: 'criando_pagamento',
+        status: 'enviando',
         createdAt: new Date().toISOString(),
         orderDetails,
         cart: JSON.parse(JSON.stringify(cart))
@@ -349,39 +371,44 @@ async function processarPedidoPix(orderDetails) {
     salvarPedidoPendente(pedidoPendente);
 
     try {
-        const response = await fetch(`${API_URL}/api/criar-pix`, {
+        const response = await fetch(`${API_URL}/api/pedidos`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                total: orderDetails.totalAmount,
-                nome: orderDetails.name
-            })
+            body: JSON.stringify(payloadPedido(orderDetails))
         });
 
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || 'Erro ao criar a cobrança.');
+            throw new Error(data.detail || 'Erro ao registrar o pedido.');
         }
 
-        const data = await response.json();
+        const pedido = data.pedido;
+        salvarUltimoPedidoId(pedido?.id);
 
-        if (!data.checkout_url || !data.order_nsu) {
-            throw new Error('Resposta de pagamento incompleta.');
-        }
-
-        salvarPedidoPendente({
-            ...pedidoPendente,
-            status: 'aguardando_pagamento',
-            payment: {
-                orderNsu: data.order_nsu,
-                checkoutUrl: data.checkout_url
+        if (orderDetails.paymentMethod === 'pix') {
+            if (!data.checkout_url || !data.order_nsu) {
+                throw new Error('Resposta de pagamento incompleta.');
             }
-        });
+            salvarPedidoPendente({
+                ...pedidoPendente,
+                status: 'aguardando_pagamento',
+                pedidoId: pedido.id,
+                payment: {
+                    orderNsu: data.order_nsu,
+                    checkoutUrl: data.checkout_url
+                }
+            });
+            window.location.assign(data.checkout_url);
+            return;
+        }
 
-        window.location.assign(data.checkout_url);
-
+        limparPedidoPendente();
+        cart = [];
+        renderCart();
+        fecharModalPix();
+        abrirModalPedidoRecebido(pedido);
     } catch (error) {
-        alert(error.message || "Erro ao criar a cobrança. Tente novamente.");
+        alert(error.message || 'Erro ao enviar o pedido. Tente novamente.');
         fecharModalPix();
     }
 }
@@ -427,73 +454,32 @@ function mostrarRecuperacaoPedido() {
 
 function concluirPedidoRetornado() {
     const params = new URLSearchParams(window.location.search);
-    if (!params.has('pedido_confirmado')) return;
-
-    const pedido = obterPedidoPendente();
-    if (!pedido?.orderDetails || !Array.isArray(pedido.cart) || pedido.status !== 'pagamento_confirmado') return;
+    const pedidoId = params.get('pedido_id');
+    if (!params.has('pedido_confirmado') || !pedidoId) return;
 
     history.replaceState({}, document.title, window.location.pathname);
-    cart = pedido.cart;
-    renderCart();
-    pedido.orderDetails.paymentMethod = pedido.captureMethod === 'pix'
-        ? 'PIX (PAGO E CONFIRMADO)'
-        : 'PAGAMENTO ONLINE (PAGO E CONFIRMADO)';
-    finalizarERedirecionarWhatsApp(pedido.orderDetails);
-}
-
-// Monta a mensagem final formatada com os itens do combo e taxa de entrega
-function finalizarERedirecionarWhatsApp(details) {
-    const phoneRestaurant = "5531990081997";
-
-    let itemsList = "";
-    cart.forEach(item => {
-        itemsList += `• *${item.quantity}x ${item.title}*\n`;
-        itemsList += `  └ Pão: ${item.pao} | Ponto: ${item.ponto}\n`;
-        itemsList += `  └ Cebola (Base): ${item.cebola} | Queijo (Base): ${item.queijo}\n`;
-        itemsList += `  └ Molho Grátis: ${item.molhoGratis}\n`;
-        
-        if (item.adicionais && item.adicionais !== 'Nenhum') {
-            itemsList += `  └ Extras: ${item.adicionais}\n`;
-        }
-        if (item.observacao && item.observacao.trim() !== '') {
-            itemsList += `  └ Obs: ${item.observacao}\n`;
-        }
-        itemsList += `  └ Subtotal: R$ ${(item.price * item.quantity).toFixed(2).replace('.', ',')}\n\n`;
-    });
-
-    let message = `*🍔 NOVO PEDIDO - MONTAÊ BURGUER*\n\n`;
-    message += `*CLIENTE:* ${details.name}\n`;
-    message += `*CONTATO:* ${details.phone}\n`;
-    message += `*FORMA DE ENTREGA:* ${details.deliveryType}\n\n`;
-
-    if (details.deliveryType === 'Delivery') {
-        message += `*ENDEREÇO DE ENTREGA:*\n${details.address}\n\n`;
-    }
-
-    message += `*FORMA DE PAGAMENTO:* ${details.paymentMethod.toUpperCase()}\n`;
-    if (details.paymentMethod === 'dinheiro' && details.troco) {
-        message += `*TROCO PARA:* R$ ${details.troco}\n`;
-    }
-    if (details.notes) message += `*OBSERVAÇÕES:* ${details.notes}\n`;
-    
-    message += `\n*ITENS DO PEDIDO:*\n${itemsList}`;
-    
-    if (details.deliveryType === 'Delivery') {
-        message += `*SUBTOTAL:* R$ ${details.subtotal.toFixed(2).replace('.', ',')}\n`;
-        message += `*TAXA DE ENTREGA:* R$ ${details.taxaEntrega.toFixed(2).replace('.', ',')}\n`;
-    }
-    
-    message += `*TOTAL DO PEDIDO:* R$ ${details.totalAmount.toFixed(2).replace('.', ',')}`;
-
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/${phoneRestaurant}?text=${encodedMessage}`, '_blank');
-
+    limparPedidoPendente();
     cart = [];
     renderCart();
-    limparPedidoPendente();
+    abrirModalPedidoRecebido({
+        id: pedidoId,
+        status_label: 'Aguardando aprovação'
+    });
+}
+
+function encaminharRetornoInfinitePay() {
+    const params = new URLSearchParams(window.location.search);
+    const hasInfinitePayReturn = params.has('order_nsu')
+        && params.has('transaction_nsu')
+        && (params.has('slug') || params.has('invoice_slug'));
+
+    if (hasInfinitePayReturn && !params.has('pedido_confirmado')) {
+        window.location.replace(`pagamento-sucesso.html${window.location.search}`);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    encaminharRetornoInfinitePay();
     concluirPedidoRetornado();
     mostrarRecuperacaoPedido();
 });

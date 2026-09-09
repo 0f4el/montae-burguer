@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Admin | Montaê Burguer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="min-h-screen bg-[#0d1117] text-white font-sans flex items-center justify-center p-4">
+    <form method="post" class="w-full max-w-sm rounded-2xl border border-[#30363d] bg-[#161b22] p-6 shadow-2xl">
+        <div class="mb-5 flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#FF9F0D] text-black">
+                <i class="fa-solid fa-burger"></i>
+            </div>
+            <div>
+                <p class="text-[10px] uppercase tracking-widest text-gray-400">Painel de atendimento</p>
+                <h1 class="text-lg font-black text-[#FF9F0D]">Montaê Burguer</h1>
+            </div>
+        </div>
+        <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-300">Senha</label>
+        <input type="password" name="password" required autofocus
+            class="mb-4 w-full rounded-xl border border-[#30363d] bg-[#0d1117] px-3 py-2.5 text-sm text-white outline-none focus:border-[#FF9F0D]">
+        {% if erro %}
+        <p class="mb-3 text-xs font-bold text-red-400">{{ erro }}</p>
+        {% endif %}
+        <button type="submit" class="w-full rounded-xl bg-[#FF9F0D] py-2.5 text-xs font-black uppercase tracking-wider text-black">
+            Entrar
+        </button>
+    </form>
+</body>
+</html>

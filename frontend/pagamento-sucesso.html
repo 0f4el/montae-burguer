@@ -8,17 +8,19 @@
 </head>
 <body class="flex min-h-screen items-center justify-center bg-[#121212] p-5 font-sans text-white">
     <main class="w-full max-w-md rounded-2xl border border-neutral-800 bg-[#1E1E1E] p-7 text-center shadow-2xl">
-        <div class="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#FF9F0D] border-t-transparent"></div>
+        <div id="loader" class="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#FF9F0D] border-t-transparent"></div>
         <h1 class="text-xl font-black">Confirmando seu pagamento</h1>
         <p id="status" class="mt-3 text-sm text-gray-400">Aguarde um instante. Estamos validando a confirmação da InfinitePay.</p>
+        <p id="pedido-id" class="mt-3 hidden text-3xl font-black text-[#FF9F0D]"></p>
         <div id="actions" class="mt-6 hidden gap-3"></div>
     </main>
 
     <script>
-        const API_URL = 'https://montae-burguer-api.onrender.com';
         const STORAGE_KEY = 'montae-pedido-pendente';
         const statusElement = document.getElementById('status');
         const actionsElement = document.getElementById('actions');
+        const loader = document.getElementById('loader');
+        const pedidoIdElement = document.getElementById('pedido-id');
 
         function getPendingOrder() {
             try {
@@ -26,6 +28,19 @@
                 return saved ? JSON.parse(saved) : null;
             } catch {
                 return null;
+            }
+        }
+
+        function salvarPedidoNoHistorico(id) {
+            if (!id) return;
+            try {
+                const historico = JSON.parse(localStorage.getItem('montae-historico-pedidos') || '[]');
+                const idNum = Number(id);
+                const listaAtualizada = [idNum, ...historico.filter(item => item !== idNum)].slice(0, 15);
+                localStorage.setItem('montae-historico-pedidos', JSON.stringify(listaAtualizada));
+                localStorage.setItem('montae-ultimo-pedido-id', String(id));
+            } catch {
+                localStorage.setItem('montae-ultimo-pedido-id', String(id));
             }
         }
 
@@ -41,28 +56,40 @@
             actionsElement.classList.add('flex');
         }
 
+        function mostrarSucesso(pedido) {
+            loader.classList.add('hidden');
+            statusElement.textContent = 'Pagamento confirmado. O pedido já foi enviado para a hamburgueria.';
+            if (pedido?.id) {
+                pedidoIdElement.textContent = `#${pedido.id}`;
+                pedidoIdElement.classList.remove('hidden');
+                salvarPedidoNoHistorico(pedido.id);
+            }
+            localStorage.removeItem(STORAGE_KEY);
+            showAction('Acompanhar pedido', () => {
+                window.location.replace(`./?pedido_confirmado=1&pedido_id=${pedido?.id || ''}`);
+            });
+            showAction('Voltar à loja', () => window.location.replace('./'), false);
+        }
+
         async function confirmPayment() {
             const params = new URLSearchParams(window.location.search);
             const orderNsu = params.get('order_nsu');
             const transactionNsu = params.get('transaction_nsu');
-            const slug = params.get('slug');
+            const slug = params.get('slug') || params.get('invoice_slug');
             const pendingOrder = getPendingOrder();
 
-            if (!pendingOrder?.payment?.checkoutUrl) {
-                statusElement.textContent = 'Não localizamos este pedido neste navegador. Volte à loja para iniciar ou recuperar seu pedido.';
-                showAction('Voltar à loja', () => window.location.replace('./'));
-                return;
-            }
-
-            if (!orderNsu || !transactionNsu || !slug || orderNsu !== pendingOrder.payment.orderNsu) {
-                statusElement.textContent = 'A InfinitePay não enviou todos os dados de confirmação. Você pode retomar a cobrança para conferir o status.';
-                showAction('Voltar ao pagamento', () => window.location.assign(pendingOrder.payment.checkoutUrl));
+            if (!orderNsu || !transactionNsu || !slug) {
+                loader.classList.add('hidden');
+                statusElement.textContent = 'Dados de confirmação não encontrados na URL. Volte à loja para acompanhar seu pedido.';
+                if (pendingOrder?.payment?.checkoutUrl) {
+                    showAction('Voltar ao pagamento', () => window.location.assign(pendingOrder.payment.checkoutUrl));
+                }
                 showAction('Voltar à loja', () => window.location.replace('./'), false);
                 return;
             }
 
             try {
-                const response = await fetch(`${API_URL}/api/verificar-pix`, {
+                const response = await fetch('/api/verificar-pix', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -72,27 +99,32 @@
                     })
                 });
 
-                if (!response.ok) throw new Error('Não foi possível validar o pagamento.');
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.detail || 'Não foi possível validar o pagamento.');
+                }
 
                 const payment = await response.json();
                 if (!payment.paid) {
+                    loader.classList.add('hidden');
                     statusElement.textContent = 'O pagamento ainda não foi confirmado. Você pode voltar ao checkout e tentar novamente.';
-                    showAction('Voltar ao pagamento', () => window.location.assign(pendingOrder.payment.checkoutUrl));
+                    if (pendingOrder?.payment?.checkoutUrl) {
+                        showAction('Voltar ao pagamento', () => window.location.assign(pendingOrder.payment.checkoutUrl));
+                    }
                     showAction('Voltar à loja', () => window.location.replace('./'), false);
                     return;
                 }
 
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                    ...pendingOrder,
-                    status: 'pagamento_confirmado',
-                    captureMethod: payment.capture_method,
-                    confirmedAt: new Date().toISOString()
-                }));
-                statusElement.textContent = 'Pagamento confirmado! Você será direcionado para enviar o pedido ao atendimento.';
-                window.location.replace('./?pedido_confirmado=1');
+                mostrarSucesso(payment.pedido);
             } catch (error) {
-                statusElement.textContent = 'Não conseguimos validar o pagamento agora. Seu pedido continua salvo neste navegador.';
-                showAction('Tentar novamente', confirmPayment);
+                loader.classList.add('hidden');
+                statusElement.textContent = `${error.message || 'Não conseguimos validar o pagamento agora.'} A hamburgueria também recebe a confirmação automaticamente.`;
+                showAction('Tentar novamente', () => {
+                    actionsElement.innerHTML = '';
+                    actionsElement.classList.add('hidden');
+                    loader.classList.remove('hidden');
+                    confirmPayment();
+                });
                 showAction('Voltar à loja', () => window.location.replace('./'), false);
             }
         }

@@ -3,6 +3,15 @@
 let cart = [];
 let builderQuantity = 1;
 
+function changeBuilderQuantity(delta) {
+    builderQuantity = Math.max(1, (builderQuantity || 1) + delta);
+    const qtyEl = document.getElementById('builder-quantity');
+    if (qtyEl) qtyEl.textContent = builderQuantity;
+    if (typeof updateCalculatedTotal === 'function') {
+        updateCalculatedTotal();
+    }
+}
+
 function openCartDrawer() {
     const backdrop = document.getElementById('cart-drawer-backdrop');
     const drawer = document.getElementById('cart-drawer');

@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos | Montaê Burguer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <style>
+        .kanban-list {
+            min-height: 120px;
+            scrollbar-width: thin;
+            scrollbar-color: #30363d #161b22;
+        }
+        .kanban-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .kanban-list::-webkit-scrollbar-track {
+            background: #161b22;
+            border-radius: 4px;
+        }
+        .kanban-list::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+        .kanban-list::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+        .sortable-ghost { opacity: 0.45; }
+        .pedido-card { cursor: grab; }
+        .pedido-card:active { cursor: grabbing; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+    </style>
+</head>
+<body class="min-h-screen bg-[#0d1117] text-[#e6edf3] font-sans md:h-screen md:overflow-hidden flex flex-col">
+    <header class="shrink-0 sticky top-0 z-20 border-b border-[#30363d] bg-[#010409]/90 backdrop-blur">
+        <div class="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <div>
+                <p class="text-[10px] uppercase tracking-widest text-gray-400">Atendimento</p>
+                <h1 class="text-lg font-black text-[#FF9F0D]">Quadro de Pedidos</h1>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="abrirModalTodosPedidos()" class="rounded-lg border border-[#30363d] bg-[#161b22] px-3 py-2 text-xs font-bold text-[#FF9F0D] hover:border-[#FF9F0D] hover:bg-[#FF9F0D]/10 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-table-list"></i> Todos os Pedidos
+                </button>
+                <button onclick="carregarPedidos()" class="rounded-lg border border-[#30363d] bg-[#161b22] px-3 py-2 text-xs font-bold text-gray-200 hover:border-[#FF9F0D] transition flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> Atualizar
+                </button>
+                <form method="post" action="/admin/logout">
+                    <button class="rounded-lg border border-[#30363d] px-3 py-2 text-xs font-bold text-gray-300 hover:text-white transition">Sair</button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto grid w-full max-w-[1700px] flex-1 min-h-0 grid-cols-1 gap-3 p-3 md:p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 md:overflow-hidden overflow-y-auto">
+        <!-- AGUARDANDO APROVAÇÃO -->
+        <section class="flex flex-col h-[70vh] md:h-full min-h-0 rounded-xl border border-[#30363d] bg-[#161b22] overflow-hidden shadow-sm">
+            <div class="shrink-0 flex items-center justify-between border-b border-[#30363d] px-3 py-3 bg-[#161b22]">
+                <h2 class="text-xs font-black uppercase tracking-wider"><i class="fa-solid fa-clock text-amber-400 mr-1"></i> Aguardando aprovação</h2>
+                <span id="count-aguardando_aprovacao" class="rounded-full bg-[#0d1117] px-2 py-0.5 text-[10px] font-black">0</span>
+            </div>
+            <div id="col-aguardando_aprovacao" class="kanban-list flex-1 min-h-0 space-y-2 overflow-y-auto p-3 overscroll-contain" data-status="aguardando_aprovacao"></div>
+        </section>
+
+        <!-- EM PREPARAÇÃO -->
+        <section class="flex flex-col h-[70vh] md:h-full min-h-0 rounded-xl border border-[#30363d] bg-[#161b22] overflow-hidden shadow-sm">
+            <div class="shrink-0 flex items-center justify-between border-b border-[#30363d] px-3 py-3 bg-[#161b22]">
+                <h2 class="text-xs font-black uppercase tracking-wider"><i class="fa-solid fa-fire text-[#FF9F0D] mr-1"></i> Em preparação</h2>
+                <span id="count-em_preparacao" class="rounded-full bg-[#0d1117] px-2 py-0.5 text-[10px] font-black">0</span>
+            </div>
+            <div id="col-em_preparacao" class="kanban-list flex-1 min-h-0 space-y-2 overflow-y-auto p-3 overscroll-contain" data-status="em_preparacao"></div>
+        </section>
+
+        <!-- PRONTO PARA RETIRADA -->
+        <section class="flex flex-col h-[70vh] md:h-full min-h-0 rounded-xl border border-[#30363d] bg-[#161b22] overflow-hidden shadow-sm">
+            <div class="shrink-0 flex items-center justify-between border-b border-[#30363d] px-3 py-3 bg-[#161b22]">
+                <h2 class="text-xs font-black uppercase tracking-wider"><i class="fa-solid fa-bag-shopping text-teal-400 mr-1"></i> Pronto p/ retirada</h2>
+                <span id="count-pronto_para_retirada" class="rounded-full bg-[#0d1117] px-2 py-0.5 text-[10px] font-black">0</span>
+            </div>
+            <div id="col-pronto_para_retirada" class="kanban-list flex-1 min-h-0 space-y-2 overflow-y-auto p-3 overscroll-contain" data-status="pronto_para_retirada"></div>
+        </section>
+
+        <!-- SAIU PARA ENTREGA -->
+        <section class="flex flex-col h-[70vh] md:h-full min-h-0 rounded-xl border border-[#30363d] bg-[#161b22] overflow-hidden shadow-sm">
+            <div class="shrink-0 flex items-center justify-between border-b border-[#30363d] px-3 py-3 bg-[#161b22]">
+                <h2 class="text-xs font-black uppercase tracking-wider"><i class="fa-solid fa-motorcycle text-sky-400 mr-1"></i> Saiu para entrega</h2>
+                <span id="count-saiu_para_entrega" class="rounded-full bg-[#0d1117] px-2 py-0.5 text-[10px] font-black">0</span>
+            </div>
+            <div id="col-saiu_para_entrega" class="kanban-list flex-1 min-h-0 space-y-2 overflow-y-auto p-3 overscroll-contain" data-status="saiu_para_entrega"></div>
+        </section>
+
+        <!-- FINALIZADO -->
+        <section class="flex flex-col h-[70vh] md:h-full min-h-0 rounded-xl border border-[#30363d] bg-[#161b22] overflow-hidden shadow-sm">
+            <div class="shrink-0 flex items-center justify-between border-b border-[#30363d] px-3 py-3 bg-[#161b22]">
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xs font-black uppercase tracking-wider"><i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Finalizado</h2>
+                    <span id="count-finalizado" class="rounded-full bg-[#0d1117] px-2 py-0.5 text-[10px] font-black">0</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button id="btn-restaurar-finalizados" onclick="restaurarAbaFinalizados()" class="hidden rounded-lg border border-[#30363d] bg-[#0d1117] px-2 py-1 text-[10px] font-bold text-gray-300 hover:border-[#FF9F0D] hover:text-[#FF9F0D] transition" title="Restaurar visualização dos finalizados ocultos">
+                        <i class="fa-solid fa-eye mr-1"></i> Exibir
+                    </button>
+                    <button onclick="limparAbaFinalizados()" class="rounded-lg border border-[#30363d] bg-[#0d1117] px-2 py-1 text-[10px] font-bold text-gray-300 hover:border-amber-500/60 hover:text-amber-400 transition" title="Limpa apenas esta aba no painel (não exclui do banco)">
+                        <i class="fa-solid fa-broom mr-1"></i> Limpar
+                    </button>
+                </div>
+            </div>
+            <div id="col-finalizado" class="kanban-list flex-1 min-h-0 space-y-2 overflow-y-auto p-3 overscroll-contain" data-status="finalizado"></div>
+        </section>
+    </main>
+
+    <!-- MODAL DETALHE DO PEDIDO -->
+    <div id="pedido-modal" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/70 p-4">
+        <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[#30363d] bg-[#161b22] p-5 shadow-2xl">
+            <div class="mb-3 flex items-center justify-between border-b border-[#30363d] pb-3">
+                <h3 id="modal-titulo" class="text-base font-black text-white"></h3>
+                <button onclick="fecharDetalhe()" class="text-gray-400 hover:text-white text-lg" title="Fechar detalhes" aria-label="Fechar detalhes"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="modal-corpo" class="space-y-2 text-xs text-gray-300"></div>
+        </div>
+    </div>
+
+    <!-- MODAL TODOS OS PEDIDOS -->
+    <div id="modal-todos-pedidos" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/75 p-4">
+        <div class="flex flex-col max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-2xl border border-[#30363d] bg-[#161b22] shadow-2xl">
+            <!-- Header do Modal -->
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#30363d] p-4 bg-[#0d1117]">
+                <div class="flex items-center gap-2">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#FF9F0D]/20 text-[#FF9F0D]">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-black text-white">Todos os Pedidos</h3>
+                        <p class="text-[11px] text-gray-400">Histórico completo de pedidos cadastrados no sistema</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="carregarHistoricoTodosPedidos()" class="rounded-lg border border-[#30363d] bg-[#161b22] px-3 py-1.5 text-xs font-bold text-gray-300 hover:border-[#FF9F0D] hover:text-white transition">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> Recarregar
+                    </button>
+                    <button onclick="fecharModalTodosPedidos()" class="rounded-lg border border-[#30363d] bg-[#161b22] px-3 py-1.5 text-xs font-bold text-gray-400 hover:text-white transition" title="Fechar histórico" aria-label="Fechar histórico">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtros e Busca -->
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#30363d] p-3 bg-[#161b22]">
+                <div class="relative flex-1 min-w-[220px]">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" id="filtro-busca-todos" oninput="aplicarFiltrosHistorico()" placeholder="Buscar por ID, nome ou WhatsApp..." class="w-full rounded-lg border border-[#30363d] bg-[#0d1117] pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-500 focus:border-[#FF9F0D] focus:outline-none">
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-[11px] font-bold text-gray-400">Status:</label>
+                    <select id="filtro-status-todos" onchange="aplicarFiltrosHistorico()" title="Filtrar por status" aria-label="Filtrar por status" class="rounded-lg border border-[#30363d] bg-[#0d1117] px-2.5 py-1.5 text-xs font-bold text-white focus:border-[#FF9F0D] focus:outline-none">
+                        <option value="todos">Todos os Status</option>
+                        <option value="aguardando_aprovacao">Aguardando aprovação</option>
+                        <option value="em_preparacao">Em preparação</option>
+                        <option value="pronto_para_retirada">Pronto para retirada</option>
+                        <option value="saiu_para_entrega">Saiu para entrega</option>
+                        <option value="finalizado">Finalizado</option>
+                        <option value="aguardando_pagamento">Aguardando pagamento</option>
+                        <option value="expirado">Expirado</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabela / Lista de Pedidos -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <div class="overflow-x-auto rounded-xl border border-[#30363d]">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-[#0d1117] text-[11px] font-black uppercase tracking-wider text-gray-400 border-b border-[#30363d]">
+                            <tr>
+                                <th class="px-3 py-2.5">ID</th>
+                                <th class="px-3 py-2.5">Data / Hora</th>
+                                <th class="px-3 py-2.5">Cliente</th>
+                                <th class="px-3 py-2.5">WhatsApp</th>
+                                <th class="px-3 py-2.5">Entrega</th>
+                                <th class="px-3 py-2.5">Pagamento</th>
+                                <th class="px-3 py-2.5">Total</th>
+                                <th class="px-3 py-2.5">Status</th>
+                                <th class="px-3 py-2.5 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-todos-pedidos-corpo" class="divide-y divide-[#30363d] bg-[#161b22] text-gray-300">
+                            <tr>
+                                <td colspan="9" class="p-8 text-center text-gray-500">
+                                    <i class="fa-solid fa-spinner fa-spin text-lg mb-2 block text-[#FF9F0D]"></i>
+                                    Carregando histórico...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Rodapé do Modal -->
+            <div class="flex items-center justify-between border-t border-[#30363d] px-4 py-3 bg-[#0d1117] text-xs text-gray-400">
+                <span id="total-registros-historico">Total de pedidos: 0</span>
+                <button onclick="fecharModalTodosPedidos()" class="rounded-lg border border-[#30363d] bg-[#161b22] px-4 py-1.5 font-bold text-gray-300 hover:text-white transition">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const COLUNAS = ["aguardando_aprovacao", "em_preparacao", "pronto_para_retirada", "saiu_para_entrega", "finalizado"];
+        let sortables = [];
+        let pedidosCache = {};
+        let todosPedidosLista = [];
+
+        const STORAGE_FINALIZADOS_OCULTOS = "montae_finalizados_ocultos_v1";
+
+        function getFinalizadosOcultos() {
+            try {
+                const stored = localStorage.getItem(STORAGE_FINALIZADOS_OCULTOS);
+                return stored ? JSON.parse(stored) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function setFinalizadosOcultos(ids) {
+            try {
+                localStorage.setItem(STORAGE_FINALIZADOS_OCULTOS, JSON.stringify(ids));
+            } catch (e) {}
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return "";
+            const div = document.createElement("div");
+            div.textContent = String(str);
+            return div.innerHTML;
+        }
+
+        function formatMoney(valor) {
+            return `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
+        }
+
+        function formatDate(iso) {
+            if (!iso) return "";
+            return new Date(iso).toLocaleString("pt-BR");
+        }
+
+        function getStatusBadge(status) {
+            switch(status) {
+                case "aguardando_aprovacao":
+                    return `<span class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-400 border border-amber-500/30"><i class="fa-solid fa-clock"></i> Aguardando Aprovação</span>`;
+                case "em_preparacao":
+                    return `<span class="inline-flex items-center gap-1 rounded-full bg-[#FF9F0D]/10 px-2 py-0.5 text-[10px] font-black text-[#FF9F0D] border border-[#FF9F0D]/30"><i class="fa-solid fa-fire"></i> Em Preparação</span>`;
+                case "pronto_para_retirada":
+                    return `<span class="inline-flex items-center gap-1 rounded-full bg-teal-500/10 px-2 py-0.5 text-[10px] font-black text-teal-400 border border-teal-500/30"><i class="fa-solid fa-bag-shopping"></i> Pronto p/ Retirada</span>`;
+                case "saiu_para_entrega":
+                    return `<span class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-black text-sky-400 border border-sky-500/30"><i class="fa-solid fa-motorcycle"></i> Saiu p/ Entrega</span>`;
+                case "finalizado":
+                    return `<span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-black text-emerald-400 border border-emerald-500/30"><i class="fa-solid fa-check"></i> Finalizado</span>`;
+                case "aguardando_pagamento":
+                    return `<span class="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-black text-purple-400 border border-purple-500/30"><i class="fa-solid fa-credit-card"></i> Aguard. Pagamento</span>`;
+                case "expirado":
+                    return `<span class="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-black text-rose-400 border border-rose-500/30"><i class="fa-solid fa-ban"></i> Expirado</span>`;
+                default:
+                    return `<span class="inline-flex items-center rounded-full bg-gray-700/50 px-2 py-0.5 text-[10px] font-black text-gray-300">${status}</span>`;
+            }
+        }
+
+        function gerarLinkWhatsApp(pedido, tipoMensagem) {
+            if (!pedido || !pedido.whatsapp) return "#";
+            let digits = String(pedido.whatsapp_digits || pedido.whatsapp).replace(/\D/g, "");
+            if (digits.length === 10 || digits.length === 11) {
+                digits = "55" + digits;
+            }
+            const primeiroNome = (pedido.nome || "Cliente").trim().split(" ")[0];
+            const isDelivery = pedido.forma_entrega === "Delivery";
+            let texto = "";
+
+            switch (tipoMensagem) {
+                case "preparo":
+                    texto = `Olá, ${primeiroNome}! 🍔\nSeu pedido #${pedido.id} no *Montaê Burguer* foi confirmado e já está na chapa sendo preparado com todo capricho! 🔥\n\nQualquer dúvida estamos à disposição!`;
+                    break;
+                case "envio":
+                    if (isDelivery) {
+                        texto = `Olá, ${primeiroNome}! 🛵\nSeu pedido #${pedido.id} no *Montaê Burguer* acabou de sair para entrega com nosso motoboy!\n\nFique atento ao interfone/campainha. Bom apetite! 🍔😋`;
+                    } else {
+                        texto = `Olá, ${primeiroNome}! 🛍️\nSeu pedido #${pedido.id} no *Montaê Burguer* está prontinho e quentinho te esperando no balcão!\n\nPode vir retirar quando quiser! 😉`;
+                    }
+                    break;
+                case "finalizado":
+                    texto = `Olá, ${primeiroNome}! 🎉\nSeu pedido #${pedido.id} no *Montaê Burguer* foi concluído com sucesso!\n\nEsperamos que tenha uma ótima refeição! Agradecemos a preferência e volte sempre! ❤️🍔`;
+                    break;
+                case "contato":
+                default:
+                    texto = `Olá, ${primeiroNome}! Aqui é da equipe do *Montaê Burguer* referente ao seu pedido #${pedido.id}. Em que podemos te ajudar? 😊`;
+                    break;
+            }
+
+            return `https://wa.me/${digits}?text=${encodeURIComponent(texto)}`;
+        }
+
+        function obterAcaoWhatsStatus(pedido) {
+            if (pedido.status === "em_preparacao" || pedido.status === "preparando") {
+                return { tipo: "preparo", label: "Avisar Preparo", icon: "fa-solid fa-fire-burner" };
+            }
+            if (pedido.status === "pronto_para_retirada") {
+                return { tipo: "envio", label: "Avisar Pronto", icon: "fa-solid fa-bag-shopping" };
+            }
+            if (pedido.status === "saiu_para_entrega") {
+                return { tipo: "envio", label: "Avisar Saída", icon: "fa-solid fa-motorcycle" };
+            }
+            if (pedido.status === "finalizado") {
+                return { tipo: "finalizado", label: "Agradecer", icon: "fa-solid fa-circle-check" };
+            }
+            // "aguardando_aprovacao" e outros
+            return { tipo: "contato", label: "Conversar", icon: "fa-brands fa-whatsapp" };
+        }
+
+        function cardHTML(pedido) {
+            const entrega = pedido.forma_entrega === "Delivery" ? "Delivery" : "Retirada";
+            const acaoWhats = obterAcaoWhatsStatus(pedido);
+            const linkWhatsContexto = gerarLinkWhatsApp(pedido, acaoWhats.tipo);
+            const linkWhatsGeral = gerarLinkWhatsApp(pedido, "contato");
+
+            return `
+                <article class="pedido-card rounded-xl border border-[#30363d] bg-[#0d1117] p-3 shadow-sm hover:border-[#FF9F0D]/70 transition" data-id="${pedido.id}">
+                    <div class="mb-2 flex items-start justify-between gap-2">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-wider text-[#FF9F0D]">Pedido #${escapeHtml(pedido.id)}</p>
+                            <h3 class="text-sm font-bold text-white">${escapeHtml(pedido.nome)}</h3>
+                        </div>
+                        <span class="rounded-md bg-[#161b22] px-2 py-0.5 text-[10px] font-bold text-gray-300 border border-[#30363d]">${escapeHtml(entrega)}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px]">
+                        <a href="${linkWhatsGeral}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-emerald-400 transition inline-flex items-center gap-1 font-medium" title="Abrir conversa no WhatsApp">
+                            <i class="fa-brands fa-whatsapp text-emerald-400"></i> ${escapeHtml(pedido.whatsapp)}
+                        </a>
+                    </div>
+                    <p class="mt-1 text-xs font-black text-[#FF9F0D]">${formatMoney(pedido.total)}</p>
+                    <p class="mt-1 text-[10px] text-gray-500"><i class="fa-regular fa-clock mr-1"></i>${formatDate(pedido.criado_em)}</p>
+                    <div class="mt-2.5 flex items-center gap-1.5">
+                        <button type="button" onclick="abrirDetalhe(${pedido.id})" class="flex-1 rounded-lg border border-[#30363d] bg-[#161b22] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-300 hover:border-[#FF9F0D] hover:text-white transition">
+                            <i class="fa-solid fa-eye mr-1"></i> Detalhes
+                        </button>
+                        <a href="${linkWhatsContexto}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition whitespace-nowrap" title="Enviar mensagem no WhatsApp do cliente">
+                            <i class="${acaoWhats.icon}"></i> ${acaoWhats.label}
+                        </a>
+                    </div>
+                </article>
+            `;
+        }
+
+        function renderColunas(colunas) {
+            const ocultos = new Set(getFinalizadosOcultos());
+            const btnRestaurar = document.getElementById("btn-restaurar-finalizados");
+            let totalFinalizadosOriginais = (colunas["finalizado"] || []).length;
+            let temOcultosNestaSessao = false;
+
+            COLUNAS.forEach((status) => {
+                let lista = colunas[status] || [];
+                lista.forEach((pedido) => { pedidosCache[pedido.id] = pedido; });
+
+                if (status === "finalizado") {
+                    const countAntes = lista.length;
+                    lista = lista.filter((pedido) => !ocultos.has(pedido.id));
+                    if (countAntes > lista.length) {
+                        temOcultosNestaSessao = true;
+                    }
+                }
+
+                const container = document.getElementById(`col-${status}`);
+                if (lista.length === 0) {
+                    if (status === "finalizado" && temOcultosNestaSessao) {
+                        container.innerHTML = `
+                            <div class="flex flex-col items-center justify-center py-10 text-center text-xs text-gray-500">
+                                <i class="fa-solid fa-broom text-xl text-amber-500/50 mb-2"></i>
+                                <p>Aba limpa (${totalFinalizadosOriginais} pedidos ocultados da visualização).</p>
+                                <button onclick="restaurarAbaFinalizados()" class="mt-2 text-[11px] font-bold text-[#FF9F0D] hover:underline">Mostrar novamente</button>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = `
+                            <div class="flex flex-col items-center justify-center py-10 text-center text-xs text-gray-600">
+                                <i class="fa-solid fa-inbox text-xl mb-2 text-gray-600"></i>
+                                <p>Nenhum pedido aqui.</p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    container.innerHTML = lista.map(cardHTML).join("");
+                }
+
+                document.getElementById(`count-${status}`).textContent = lista.length;
+            });
+
+            if (btnRestaurar) {
+                if (temOcultosNestaSessao || ocultos.size > 0) {
+                    btnRestaurar.classList.remove("hidden");
+                } else {
+                    btnRestaurar.classList.add("hidden");
+                }
+            }
+        }
+
+        let ultimasColunas = {};
+
+        async function carregarPedidos() {
+            try {
+                const response = await fetch("/api/admin/pedidos", { credentials: "same-origin" });
+                if (response.status === 401) {
+                    window.location.href = "/admin/login";
+                    return;
+                }
+                const data = await response.json();
+                ultimasColunas = data.colunas || {};
+                renderColunas(ultimasColunas);
+            } catch (err) {
+                console.error("Erro ao carregar pedidos:", err);
+            }
+        }
+
+        function limparAbaFinalizados() {
+            const finalizados = ultimasColunas["finalizado"] || [];
+            if (finalizados.length === 0) {
+                alert("A aba de Finalizados já está vazia.");
+                return;
+            }
+            const ocultosAtuais = new Set(getFinalizadosOcultos());
+            finalizados.forEach(p => ocultosAtuais.add(p.id));
+            setFinalizadosOcultos(Array.from(ocultosAtuais));
+            renderColunas(ultimasColunas);
+        }
+
+        function restaurarAbaFinalizados() {
+            setFinalizadosOcultos([]);
+            renderColunas(ultimasColunas);
+        }
+
+        async function moverPedido(id, status) {
+            const numId = Number(id);
+            // Se foi movido para outro status que não finalizado, remove da lista de ocultos caso estivesse lá
+            const ocultos = new Set(getFinalizadosOcultos());
+            if (ocultos.has(numId)) {
+                ocultos.delete(numId);
+                setFinalizadosOcultos(Array.from(ocultos));
+            }
+
+            const response = await fetch(`/api/admin/pedidos/${id}/status`, {
+                method: "PATCH",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status })
+            });
+            await carregarPedidos();
+        }
+
+        function iniciarSortable() {
+            COLUNAS.forEach((status) => {
+                const el = document.getElementById(`col-${status}`);
+                const sortable = Sortable.create(el, {
+                    group: "pedidos",
+                    animation: 150,
+                    draggable: ".pedido-card",
+                    onAdd: async (evt) => {
+                        const id = evt.item.dataset.id;
+                        const novoStatus = evt.to.dataset.status;
+                        await moverPedido(id, novoStatus);
+                    }
+                });
+                sortables.push(sortable);
+            });
+        }
+
+        function abrirDetalhe(id) {
+            const pedido = pedidosCache[id] || todosPedidosLista.find(p => p.id === Number(id));
+            if (!pedido) return;
+            document.getElementById("modal-titulo").textContent = `Pedido #${pedido.id} · ${pedido.nome}`;
+            const itens = (pedido.hamburgueres || []).map((item) => `
+                <div class="rounded-lg border border-[#30363d] bg-[#0d1117] p-3">
+                    <p class="font-black text-white">${escapeHtml(item.quantidade)}x ${escapeHtml(item.titulo)}</p>
+                    <p class="text-gray-400">Pão: <span class="text-white">${escapeHtml(item.pao || "-")}</span> · Ponto: <span class="text-white">${escapeHtml(item.ponto || "-")}</span></p>
+                    <p class="text-gray-400">Cebola: <span class="text-white">${escapeHtml(item.cebola || "-")}</span> · Queijo: <span class="text-white">${escapeHtml(item.queijo || "-")}</span> · Molho: <span class="text-white">${escapeHtml(item.molho_gratis || "-")}</span></p>
+                    ${item.adicionais && item.adicionais !== "Nenhum" ? `<p class="text-gray-400">Extras: <span class="text-[#FF9F0D]">${escapeHtml(item.adicionais)}</span></p>` : ""}
+                    ${item.observacao ? `<p class="text-gray-400">Obs: <span class="italic text-gray-300">${escapeHtml(item.observacao)}</span></p>` : ""}
+                    <p class="text-[#FF9F0D] font-bold mt-1">${formatMoney(item.preco * item.quantidade)}</p>
+                </div>
+            `).join("");
+            document.getElementById("modal-corpo").innerHTML = `
+                <div class="grid grid-cols-2 gap-2 pb-2 border-b border-[#30363d]">
+                    <div>
+                        <p class="text-[10px] text-gray-500 uppercase font-black">Status Atual</p>
+                        <div class="mt-0.5">${getStatusBadge(pedido.status)}</div>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-gray-500 uppercase font-black">Valor Total</p>
+                        <p class="text-sm font-black text-[#FF9F0D]">${formatMoney(pedido.total)}</p>
+                    </div>
+                </div>
+                <!-- NOTIFICAÇÕES WHATSAPP RÁPIDAS -->
+                <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 my-2">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-[11px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                            <i class="fa-brands fa-whatsapp text-base"></i> Notificar Cliente no WhatsApp (1 Clique)
+                        </p>
+                        <a href="${gerarLinkWhatsApp(pedido, 'contato')}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold text-gray-400 hover:text-emerald-300 transition underline">
+                            ${escapeHtml(pedido.whatsapp)}
+                        </a>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                        <a href="${gerarLinkWhatsApp(pedido, 'preparo')}" target="_blank" rel="noopener noreferrer" class="flex flex-col items-center justify-center p-2 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-amber-500/60 hover:bg-amber-500/10 text-center transition group" title="Enviar mensagem de pedido em preparo">
+                            <i class="fa-solid fa-fire-burner text-amber-400 text-sm mb-1 group-hover:scale-110 transition"></i>
+                            <span class="font-bold text-white text-[11px]">Em Preparo</span>
+                            <span class="text-[9px] text-gray-400">Avisar início</span>
+                        </a>
+                        <a href="${gerarLinkWhatsApp(pedido, 'envio')}" target="_blank" rel="noopener noreferrer" class="flex flex-col items-center justify-center p-2 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-sky-500/60 hover:bg-sky-500/10 text-center transition group" title="Enviar mensagem de pedido a caminho ou pronto">
+                            <i class="fa-solid ${pedido.forma_entrega === 'Delivery' ? 'fa-motorcycle text-sky-400' : 'fa-bag-shopping text-teal-400'} text-sm mb-1 group-hover:scale-110 transition"></i>
+                            <span class="font-bold text-white text-[11px]">${pedido.forma_entrega === 'Delivery' ? 'Saiu Entrega' : 'Pronto Retirada'}</span>
+                            <span class="text-[9px] text-gray-400">Avisar saída</span>
+                        </a>
+                        <a href="${gerarLinkWhatsApp(pedido, 'finalizado')}" target="_blank" rel="noopener noreferrer" class="flex flex-col items-center justify-center p-2 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-emerald-500/60 hover:bg-emerald-500/10 text-center transition group" title="Enviar agradecimento e confirmação de entrega">
+                            <i class="fa-solid fa-circle-check text-emerald-400 text-sm mb-1 group-hover:scale-110 transition"></i>
+                            <span class="font-bold text-white text-[11px]">Concluído</span>
+                            <span class="text-[9px] text-gray-400">Agradecer</span>
+                        </a>
+                        <a href="${gerarLinkWhatsApp(pedido, 'contato')}" target="_blank" rel="noopener noreferrer" class="flex flex-col items-center justify-center p-2 rounded-lg bg-[#0d1117] border border-[#30363d] hover:border-emerald-500/60 hover:bg-emerald-500/10 text-center transition group" title="Abrir conversa livre com o cliente">
+                            <i class="fa-brands fa-whatsapp text-emerald-400 text-sm mb-1 group-hover:scale-110 transition"></i>
+                            <span class="font-bold text-white text-[11px]">Conversar</span>
+                            <span class="text-[9px] text-gray-400">Abrir chat</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="space-y-1 pt-1">
+                    <p><strong>WhatsApp:</strong> <a href="${gerarLinkWhatsApp(pedido, 'contato')}" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline font-bold">${escapeHtml(pedido.whatsapp)} <i class="fa-brands fa-whatsapp ml-1"></i></a></p>
+                    <p><strong>Entrega:</strong> ${escapeHtml(pedido.forma_entrega)}</p>
+                    ${pedido.endereco ? `<p><strong>Endereço:</strong> ${escapeHtml(pedido.endereco)}</p>` : ""}
+                    <p><strong>Pagamento:</strong> ${escapeHtml(pedido.forma_pagamento)} ${pedido.pago ? '<span class="text-emerald-400 font-bold">(Pago)</span>' : '<span class="text-amber-400">(Pendente)</span>'}</p>
+                    ${pedido.troco ? `<p><strong>Troco p/:</strong> ${escapeHtml(pedido.troco)}</p>` : ""}
+                    ${pedido.observacao ? `<p><strong>Observação:</strong> ${escapeHtml(pedido.observacao)}</p>` : ""}
+                    <p><strong>Criado em:</strong> ${formatDate(pedido.criado_em)}</p>
+                </div>
+                <div class="pt-3 border-t border-[#30363d]">
+                    <p class="text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2">Itens do Pedido</p>
+                    <div class="space-y-2 max-h-60 overflow-y-auto">${itens || '<p class="text-gray-500">Nenhum item listado.</p>'}</div>
+                </div>
+            `;
+            const modal = document.getElementById("pedido-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+
+        function fecharDetalhe() {
+            const modal = document.getElementById("pedido-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        // ======================= TODOS OS PEDIDOS =======================
+        async function abrirModalTodosPedidos() {
+            const modal = document.getElementById("modal-todos-pedidos");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            await carregarHistoricoTodosPedidos();
+        }
+
+        function fecharModalTodosPedidos() {
+            const modal = document.getElementById("modal-todos-pedidos");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        async function carregarHistoricoTodosPedidos() {
+            const tbody = document.getElementById("tabela-todos-pedidos-corpo");
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="p-8 text-center text-gray-500">
+                        <i class="fa-solid fa-spinner fa-spin text-lg mb-2 block text-[#FF9F0D]"></i>
+                        Carregando pedidos...
+                    </td>
+                </tr>
+            `;
+
+            try {
+                const response = await fetch("/api/admin/pedidos/todos", { credentials: "same-origin" });
+                if (response.status === 401) {
+                    window.location.href = "/admin/login";
+                    return;
+                }
+                const data = await response.json();
+                todosPedidosLista = data.pedidos || [];
+                // Atualiza cache de detalhes
+                todosPedidosLista.forEach(p => { pedidosCache[p.id] = p; });
+                aplicarFiltrosHistorico();
+            } catch (err) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="p-8 text-center text-red-400">
+                            <i class="fa-solid fa-triangle-exclamation text-lg mb-2 block"></i>
+                            Falha ao carregar pedidos. Tente novamente.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function aplicarFiltrosHistorico() {
+            const busca = (document.getElementById("filtro-busca-todos").value || "").toLowerCase().trim();
+            const statusFiltro = document.getElementById("filtro-status-todos").value;
+
+            let filtrados = todosPedidosLista.filter((pedido) => {
+                const atendeStatus = (statusFiltro === "todos" || pedido.status === statusFiltro);
+                if (!atendeStatus) return false;
+
+                if (!busca) return true;
+
+                const matchId = String(pedido.id).includes(busca);
+                const matchNome = (pedido.nome || "").toLowerCase().includes(busca);
+                const matchWhats = (pedido.whatsapp || "").toLowerCase().includes(busca);
+                const matchEnd = (pedido.endereco || "").toLowerCase().includes(busca);
+
+                return matchId || matchNome || matchWhats || matchEnd;
+            });
+
+            const tbody = document.getElementById("tabela-todos-pedidos-corpo");
+            document.getElementById("total-registros-historico").textContent = `Exibindo ${filtrados.length} de ${todosPedidosLista.length} pedidos`;
+
+            if (filtrados.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="p-8 text-center text-gray-500">
+                            <i class="fa-solid fa-magnifying-glass text-lg mb-2 block text-gray-600"></i>
+                            Nenhum pedido encontrado com os filtros selecionados.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtrados.map((pedido) => `
+                <tr class="hover:bg-[#0d1117]/80 transition">
+                    <td class="px-3 py-2.5 font-bold text-[#FF9F0D]">#${escapeHtml(pedido.id)}</td>
+                    <td class="px-3 py-2.5 text-[11px] text-gray-400 whitespace-nowrap">${formatDate(pedido.criado_em)}</td>
+                    <td class="px-3 py-2.5 font-bold text-white">${escapeHtml(pedido.nome)}</td>
+                    <td class="px-3 py-2.5 whitespace-nowrap">
+                        <a href="${gerarLinkWhatsApp(pedido, 'contato')}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 font-bold text-emerald-400 hover:text-emerald-300 hover:underline transition" title="Abrir conversa no WhatsApp">
+                            <i class="fa-brands fa-whatsapp"></i> ${escapeHtml(pedido.whatsapp)}
+                        </a>
+                    </td>
+                    <td class="px-3 py-2.5 whitespace-nowrap"><span class="rounded bg-[#0d1117] px-2 py-0.5 text-[10px] font-bold text-gray-300 border border-[#30363d]">${escapeHtml(pedido.forma_entrega)}</span></td>
+                    <td class="px-3 py-2.5 text-[11px] text-gray-300 whitespace-nowrap">${escapeHtml(pedido.forma_pagamento)}</td>
+                    <td class="px-3 py-2.5 font-black text-[#FF9F0D] whitespace-nowrap">${formatMoney(pedido.total)}</td>
+                    <td class="px-3 py-2.5 whitespace-nowrap">${getStatusBadge(pedido.status)}</td>
+                    <td class="px-3 py-2.5 text-center whitespace-nowrap">
+                        <button onclick="abrirDetalhe(${pedido.id})" class="rounded-lg border border-[#30363d] bg-[#0d1117] px-2.5 py-1 text-[11px] font-bold text-gray-300 hover:border-[#FF9F0D] hover:text-[#FF9F0D] transition" title="Ver Detalhes do Pedido">
+                            <i class="fa-solid fa-eye mr-1"></i> Detalhes
+                        </button>
+                    </td>
+                </tr>
+            `).join("");
+        }
+
+        // Fechar modais com tecla Esc
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                fecharDetalhe();
+                fecharModalTodosPedidos();
+            }
+        });
+
+        iniciarSortable();
+        carregarPedidos();
+        setInterval(carregarPedidos, 8000);
+    </script>
+</body>
+</html>

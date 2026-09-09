@@ -1,0 +1,27 @@
+# Ambientes Virtuais e Python
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+
+# Arquivos de Configuração e Chaves Secretas
+.env
+*.env
+
+# Bancos de dados locais
+*.db
+*.sqlite
+*.sqlite3
+backend/instance/*.db
+backend/instance/*.sqlite
+
+# Logs e arquivos do SO
+*.log
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
