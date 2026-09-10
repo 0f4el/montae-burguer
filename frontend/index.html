@@ -155,40 +155,12 @@
 
                     <!-- BOTÃO PARA REVELAR O CONSTRUTOR -->
                     <button onclick="revealAndScrollBuilder()" class="w-full bg-[#FF9F0D] hover:bg-[#E08800] text-black font-black py-3 px-4 rounded-xl shadow-lg transition cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider text-xs">
-                        <i class="fa-solid fa-sliders text-sm"></i> Clique para Montar Suas Opções
+                        <i class="fa-solid fa-sliders text-sm"></i> Clique para Montar Seu Pedido
                     </button>
                 </div>
             </div>
         </div>
     </section>
-
-    <!-- BOTÃO DE TESTE TEMPORÁRIO (R$ 1,00) -->
-    <div class="max-w-5xl mx-auto px-4 py-4 text-center">
-        <button onclick="adicionarItemTeste()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs uppercase tracking-wider">
-            🧪 Testar PIX (Adicionar Item de R$ 1,00)
-        </button>
-    </div>
-
-    <script>
-    function adicionarItemTeste() {
-        const itemTeste = {
-            id: Date.now(),
-            title: "Item de Teste PIX",
-            price: 1.00,
-            quantity: 1,
-            pao: "Teste",
-            ponto: "Ao Ponto",
-            cebola: "Nenhuma",
-            queijo: "Nenhum",
-            molhoGratis: "Nenhum",
-            adicionais: "Nenhum",
-            observacao: "Teste de pagamento"
-        };
-        cart.push(itemTeste);
-        renderCart();
-        openCartDrawer();
-    }
-    </script>
 
     <!-- ÁREA DO CONSTRUTOR (ESCONDIDA ATÉ CLICAR EM MONTAR) -->
     <section id="construtor" class="hidden max-w-5xl mx-auto px-4 py-8 scroll-mt-16">
