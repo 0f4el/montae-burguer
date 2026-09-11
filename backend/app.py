@@ -12,6 +12,7 @@ from sqlalchemy import func, or_
 from models import (
     STATUS_AGUARDANDO_APROVACAO,
     STATUS_AGUARDANDO_PAGAMENTO,
+    STATUS_CANCELADO,
     STATUS_EXPIRADO,
     STATUS_KANBAN,
     ItemPedido,
@@ -100,15 +101,16 @@ def restaurante_aberto(dt=None):
 
 def expirar_pedidos_pendentes_antigos(minutos=60):
     """
-    Marca como 'expirado' pedidos com status 'aguardando_pagamento'
+    Marca como 'cancelado' pedidos com status 'aguardando_pagamento' ou 'expirado'
     que foram criados há mais de `minutos` minutos (padrão: 60).
+    Pedidos expirados também são movidos para cancelado.
     """
     expirados = []
     try:
         limite = agora_utc() - timedelta(minutes=minutos)
         pedidos_pendentes = (
             Pedido.query.filter(
-                Pedido.status == STATUS_AGUARDANDO_PAGAMENTO,
+                Pedido.status.in_([STATUS_AGUARDANDO_PAGAMENTO, STATUS_EXPIRADO]),
                 Pedido.pago == False,  # noqa: E712
             )
             .all()
@@ -121,7 +123,7 @@ def expirar_pedidos_pendentes_antigos(minutos=60):
             if criado.tzinfo is None:
                 criado = criado.replace(tzinfo=timezone.utc)
             if criado <= limite:
-                pedido.status = STATUS_EXPIRADO
+                pedido.status = STATUS_CANCELADO
                 pedido.atualizado_em = agora_utc()
                 expirados.append(pedido)
 
@@ -162,7 +164,8 @@ def ativar_pedido_pago(pedido, capture_method=None):
         )
 
     pedido.pago = True
-    if pedido.status in (STATUS_AGUARDANDO_PAGAMENTO, STATUS_EXPIRADO):
+    # Reativa pedido cancelado, expirado ou aguardando pagamento quando o pagamento é confirmado
+    if pedido.status in (STATUS_AGUARDANDO_PAGAMENTO, STATUS_EXPIRADO, STATUS_CANCELADO):
         pedido.status = STATUS_AGUARDANDO_APROVACAO
         pedido.atualizado_em = agora_utc()
 

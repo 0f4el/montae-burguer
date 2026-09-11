@@ -136,11 +136,14 @@
             <button onclick="selecionarAbaMobile('finalizado')" id="tab-mobile-finalizado" class="tab-mobile-btn shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 bg-[#161b22] text-emerald-400 border border-[#30363d]">
                 <i class="fa-solid fa-circle-check text-[11px]"></i> Concluídos <span id="badge-tab-finalizado" class="rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[10px] font-black ml-0.5">0</span>
             </button>
+            <button onclick="selecionarAbaMobile('cancelado')" id="tab-mobile-cancelado" class="tab-mobile-btn shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 bg-[#161b22] text-rose-400 border border-[#30363d]">
+                <i class="fa-solid fa-ban text-[11px]"></i> Cancelados <span id="badge-tab-cancelado" class="rounded-full bg-rose-500/20 px-1.5 py-0.2 text-[10px] font-black ml-0.5">0</span>
+            </button>
         </div>
     </header>
 
     <!-- QUADRO KANBAN PRINCIPAL -->
-    <main id="kanban-container" class="mx-auto w-full max-w-[1700px] flex-1 min-h-0 grid grid-cols-1 gap-3 p-3 md:p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 md:overflow-hidden overflow-y-auto">
+    <main id="kanban-container" class="mx-auto w-full max-w-[1700px] flex-1 min-h-0 grid grid-cols-1 gap-3 p-3 md:p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 md:overflow-hidden overflow-y-auto">
         
         <!-- 1. AGUARDANDO APROVAÇÃO -->
         <section id="section-aguardando_aprovacao" class="kanban-col-section flex flex-col min-h-[300px] md:h-full md:min-h-0 rounded-2xl border border-[#30363d] bg-[#161b22] overflow-hidden shadow-sm">
@@ -206,6 +209,22 @@
             </div>
             <div id="col-finalizado" class="kanban-list flex-1 min-h-[140px] space-y-2.5 overflow-y-auto p-2.5 sm:p-3 overscroll-contain" data-status="finalizado"></div>
         </section>
+
+        <!-- 6. CANCELADOS -->
+        <section id="section-cancelado" class="kanban-col-section flex flex-col min-h-[300px] md:h-full md:min-h-0 rounded-2xl border border-[#30363d] bg-[#161b22] overflow-hidden shadow-sm">
+            <div class="shrink-0 flex items-center justify-between border-b border-[#30363d] px-3.5 py-3 bg-[#161b22]/90">
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xs font-black uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-ban"></i> Cancelados
+                    </h2>
+                    <span id="count-cancelado" class="rounded-full bg-[#0d1117] px-2 py-0.5 text-[10px] font-black text-rose-400 border border-rose-500/20">0</span>
+                </div>
+                <button onclick="limparAbaCancelados()" class="rounded-lg border border-[#30363d] bg-[#0d1117] px-2 py-1 text-[10px] font-bold text-gray-300 hover:border-rose-500/60 hover:text-rose-400 transition active:scale-95" title="Limpa apenas esta aba no painel (não exclui do banco)">
+                    <i class="fa-solid fa-broom mr-1"></i> Limpar
+                </button>
+            </div>
+            <div id="col-cancelado" class="kanban-list flex-1 min-h-[140px] space-y-2.5 overflow-y-auto p-2.5 sm:p-3 overscroll-contain" data-status="cancelado"></div>
+        </section>
     </main>
 
     <!-- CONTAINER INVISÍVEL PARA IMPRESSÃO TÉRMICA -->
@@ -269,6 +288,7 @@
                         <option value="pronto_para_retirada">Pronto para retirada</option>
                         <option value="saiu_para_entrega">Saiu para entrega</option>
                         <option value="finalizado">Finalizado</option>
+                        <option value="cancelado">Cancelado</option>
                         <option value="aguardando_pagamento">Aguardando pagamento</option>
                         <option value="expirado">Expirado</option>
                     </select>
@@ -323,7 +343,7 @@
     </div>
 
     <script>
-        const COLUNAS = ["aguardando_aprovacao", "em_preparacao", "pronto_para_retirada", "saiu_para_entrega", "finalizado"];
+        const COLUNAS = ["aguardando_aprovacao", "em_preparacao", "pronto_para_retirada", "saiu_para_entrega", "finalizado", "cancelado"];
         let sortables = [];
         let pedidosCache = {};
         let todosPedidosLista = [];
@@ -359,7 +379,13 @@
 
         function formatDate(iso) {
             if (!iso) return "";
-            return new Date(iso).toLocaleString("pt-BR", {
+            // Garante que datas UTC (sufixo Z) sejam interpretadas corretamente
+            let dateStr = iso;
+            if (!dateStr.endsWith("Z") && !dateStr.includes("+") && !dateStr.includes("-", 10)) {
+                dateStr += "Z";
+            }
+            return new Date(dateStr).toLocaleString("pt-BR", {
+                timeZone: "America/Sao_Paulo",
                 day: "2-digit",
                 month: "2-digit",
                 hour: "2-digit",
@@ -381,6 +407,8 @@
                     return `<span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-black text-emerald-400 border border-emerald-500/30"><i class="fa-solid fa-check"></i> Finalizado</span>`;
                 case "aguardando_pagamento":
                     return `<span class="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-black text-purple-400 border border-purple-500/30"><i class="fa-solid fa-credit-card"></i> Aguard. Pagamento</span>`;
+                case "cancelado":
+                    return `<span class="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-black text-rose-400 border border-rose-500/30"><i class="fa-solid fa-ban"></i> Cancelado</span>`;
                 case "expirado":
                     return `<span class="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-black text-rose-400 border border-rose-500/30"><i class="fa-solid fa-ban"></i> Expirado</span>`;
                 default:
@@ -628,6 +656,35 @@
 
         function restaurarAbaFinalizados() {
             setFinalizadosOcultos([]);
+            renderColunas(ultimasColunas);
+        }
+
+        const STORAGE_CANCELADOS_OCULTOS = "montae_cancelados_ocultos_v1";
+
+        function getCanceladosOcultos() {
+            try {
+                const stored = localStorage.getItem(STORAGE_CANCELADOS_OCULTOS);
+                return stored ? JSON.parse(stored) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function setCanceladosOcultos(ids) {
+            try {
+                localStorage.setItem(STORAGE_CANCELADOS_OCULTOS, JSON.stringify(ids));
+            } catch (e) {}
+        }
+
+        function limparAbaCancelados() {
+            const cancelados = ultimasColunas["cancelado"] || [];
+            if (cancelados.length === 0) {
+                alert("A aba de Cancelados já está vazia.");
+                return;
+            }
+            const ocultosAtuais = new Set(getCanceladosOcultos());
+            cancelados.forEach(p => ocultosAtuais.add(p.id));
+            setCanceladosOcultos(Array.from(ocultosAtuais));
             renderColunas(ultimasColunas);
         }
 
@@ -942,14 +999,12 @@
         }
 
         // Função para Gerar e Imprimir Comanda Térmica (Padronizada para Bobina 58mm)
+        // Usa nova janela para máxima compatibilidade com iOS Safari
         function imprimirComanda(id) {
             const pedido = pedidosCache[id] || todosPedidosLista.find(p => p.id === Number(id));
             if (!pedido) return;
 
-            const printContainer = document.getElementById("comanda-termica-print");
-            if (!printContainer) return;
-
-            const agora = formatDate(pedido.criado_em) || new Date().toLocaleString("pt-BR");
+            const agora = formatDate(pedido.criado_em) || new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
             const isDelivery = pedido.forma_entrega === "Delivery";
 
             let itensHTML = "";
@@ -957,7 +1012,7 @@
                 itensHTML += `
                     <div style="margin-bottom: 6px; border-bottom: 1px dashed #000; padding-bottom: 4px;">
                         <div style="font-weight: bold; font-size: 12px; display: flex; justify-content: space-between;">
-                            <span>${item.quantidade}x ${escapeHtml(item.titulo)}</span>
+                            <span>${escapeHtml(item.quantidade)}x ${escapeHtml(item.titulo)}</span>
                             <span>${formatMoney(item.preco * item.quantidade)}</span>
                         </div>
                         <div style="font-size: 10px; margin-top: 2px; line-height: 1.25;">
@@ -971,50 +1026,89 @@
                 `;
             });
 
-            printContainer.innerHTML = `
-                <div style="text-align: center; margin-bottom: 6px;">
-                    <div style="font-size: 15px; font-weight: 900; letter-spacing: 0.5px;">* MONTAE BURGUER *</div>
-                    <div style="font-size: 10px; font-weight: bold;">=== COMANDA DE COZINHA ===</div>
-                </div>
+            const comandaHTML = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comanda #${pedido.id}</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+        width: 100%; background: #fff; color: #000;
+        font-family: 'Courier New', Courier, monospace, sans-serif;
+        font-size: 11px; line-height: 1.25;
+    }
+    .comanda {
+        width: 100%; max-width: 52mm; margin: 0 auto; padding: 1mm 2mm;
+    }
+    @media print {
+        @page { margin: 0mm; size: auto; }
+        html, body { width: 100% !important; }
+        .comanda { max-width: 52mm !important; }
+        .no-print { display: none !important; }
+    }
+</style></head><body>
+<div class="no-print" style="text-align:center; padding:12px; font-family:sans-serif;">
+    <button onclick="window.print()" style="font-size:16px; padding:12px 32px; background:#FF9F0D; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
+        🖨️ Imprimir Comanda
+    </button>
+    <p style="margin-top:8px; font-size:12px; color:#666;">Toque no botão acima ou use o menu de compartilhamento do navegador.</p>
+</div>
+<div class="comanda">
+    <div style="text-align: center; margin-bottom: 6px;">
+        <div style="font-size: 15px; font-weight: 900; letter-spacing: 0.5px;">* MONTAE BURGUER *</div>
+        <div style="font-size: 10px; font-weight: bold;">=== COMANDA DE COZINHA ===</div>
+    </div>
+    <div style="border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 4px 0; margin-bottom: 5px; font-size: 11px;">
+        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 13px;">
+            <span>PEDIDO: #${pedido.id}</span>
+            <span>[${isDelivery ? 'DELIVERY' : 'RETIRADA'}]</span>
+        </div>
+        <div>Data: ${agora}</div>
+    </div>
+    <div style="border-bottom: 1px dashed #000; padding-bottom: 4px; margin-bottom: 5px; font-size: 11px;">
+        <div><strong>CLIENTE:</strong> ${escapeHtml(pedido.nome || '-')}</div>
+        <div><strong>WHATSAPP:</strong> ${escapeHtml(pedido.whatsapp || '-')}</div>
+        ${isDelivery && pedido.endereco ? `<div style="margin-top: 2px;"><strong>ENDERECO:</strong><br>${escapeHtml(pedido.endereco)}</div>` : ""}
+        ${pedido.observacao ? `<div style="margin-top: 2px;"><strong>OBS GERAL:</strong> ${escapeHtml(pedido.observacao)}</div>` : ""}
+    </div>
+    <div style="margin-bottom: 4px;">
+        <div style="font-weight: 900; font-size: 11px; text-transform: uppercase; margin-bottom: 3px;">ITENS:</div>
+        ${itensHTML || '<div>Nenhum item</div>'}
+    </div>
+    <div style="border-top: 2px dashed #000; padding-top: 4px; font-size: 11px;">
+        <div style="display: flex; justify-content: space-between;">
+            <span>Pagamento:</span>
+            <strong>${escapeHtml(pedido.forma_pagamento || '-')} ${pedido.pago ? '(PAGO)' : '(PENDENTE)'}</strong>
+        </div>
+        ${pedido.troco ? `<div style="display: flex; justify-content: space-between;"><span>Troco para:</span><strong>${escapeHtml(pedido.troco)}</strong></div>` : ""}
+        <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; margin-top: 3px;">
+            <span>TOTAL:</span>
+            <span>${formatMoney(pedido.total)}</span>
+        </div>
+    </div>
+    <div style="text-align: center; margin-top: 8px; font-size: 9px; border-top: 1px dashed #000; padding-top: 4px;">
+        <div>Obrigado pela preferencia!</div>
+    </div>
+</div>
+</body></html>`;
 
-                <div style="border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 4px 0; margin-bottom: 5px; font-size: 11px;">
-                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 13px;">
-                        <span>PEDIDO: #${pedido.id}</span>
-                        <span>[${isDelivery ? 'DELIVERY' : 'RETIRADA'}]</span>
-                    </div>
-                    <div>Data: ${agora}</div>
-                </div>
-
-                <div style="border-bottom: 1px dashed #000; padding-bottom: 4px; margin-bottom: 5px; font-size: 11px;">
-                    <div><strong>CLIENTE:</strong> ${escapeHtml(pedido.nome || '-')}</div>
-                    <div><strong>WHATSAPP:</strong> ${escapeHtml(pedido.whatsapp || '-')}</div>
-                    ${isDelivery && pedido.endereco ? `<div style="margin-top: 2px;"><strong>ENDERECO:</strong><br>${escapeHtml(pedido.endereco)}</div>` : ""}
-                    ${pedido.observacao ? `<div style="margin-top: 2px;"><strong>OBS GERAL:</strong> ${escapeHtml(pedido.observacao)}</div>` : ""}
-                </div>
-
-                <div style="margin-bottom: 4px;">
-                    <div style="font-weight: 900; font-size: 11px; text-transform: uppercase; margin-bottom: 3px;">ITENS:</div>
-                    ${itensHTML || '<div>Nenhum item</div>'}
-                </div>
-
-                <div style="border-top: 2px dashed #000; padding-top: 4px; font-size: 11px;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Pagamento:</span>
-                        <strong>${escapeHtml(pedido.forma_pagamento || '-')} ${pedido.pago ? '(PAGO)' : '(PENDENTE)'}</strong>
-                    </div>
-                    ${pedido.troco ? `<div style="display: flex; justify-content: space-between;"><span>Troco para:</span><strong>${escapeHtml(pedido.troco)}</strong></div>` : ""}
-                    <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; margin-top: 3px;">
-                        <span>TOTAL:</span>
-                        <span>${formatMoney(pedido.total)}</span>
-                    </div>
-                </div>
-
-                <div style="text-align: center; margin-top: 8px; font-size: 9px; border-top: 1px dashed #000; padding-top: 4px;">
-                    <div>Obrigado pela preferencia!</div>
-                </div>
-            `;
-
-            window.print();
+            // Abre nova janela com a comanda - funciona em iOS Safari, Android Chrome, e Desktop
+            const printWindow = window.open('', '_blank');
+            if (printWindow) {
+                printWindow.document.write(comandaHTML);
+                printWindow.document.close();
+                // Delay para garantir que o conteúdo renderizou antes de imprimir (necessário no Safari iOS)
+                setTimeout(() => {
+                    printWindow.focus();
+                    printWindow.print();
+                }, 600);
+            } else {
+                // Fallback: popup bloqueado - usa o método antigo com container inline
+                const printContainer = document.getElementById("comanda-termica-print");
+                if (printContainer) {
+                    printContainer.innerHTML = `<div class="comanda">${comandaHTML.split('<div class="comanda">')[1].split('</body>')[0]}</div>`;
+                    setTimeout(() => window.print(), 300);
+                }
+            }
         }
 
         // Fechar modais com tecla Esc

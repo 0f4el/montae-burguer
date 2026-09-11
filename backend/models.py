@@ -10,6 +10,7 @@ STATUS_EM_PREPARACAO = "em_preparacao"
 STATUS_PRONTO_PARA_RETIRADA = "pronto_para_retirada"
 STATUS_SAIU_PARA_ENTREGA = "saiu_para_entrega"
 STATUS_FINALIZADO = "finalizado"
+STATUS_CANCELADO = "cancelado"
 STATUS_EXPIRADO = "expirado"
 
 STATUS_KANBAN = (
@@ -18,6 +19,7 @@ STATUS_KANBAN = (
     STATUS_PRONTO_PARA_RETIRADA,
     STATUS_SAIU_PARA_ENTREGA,
     STATUS_FINALIZADO,
+    STATUS_CANCELADO,
 )
 
 STATUS_LABELS = {
@@ -27,12 +29,23 @@ STATUS_LABELS = {
     STATUS_PRONTO_PARA_RETIRADA: "Pronto para retirada",
     STATUS_SAIU_PARA_ENTREGA: "Saiu para entrega",
     STATUS_FINALIZADO: "Finalizado",
+    STATUS_CANCELADO: "Cancelado",
     STATUS_EXPIRADO: "Expirado",
 }
 
 
 def agora_utc():
     return datetime.now(timezone.utc)
+
+
+def format_iso_utc(dt):
+    if not dt:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    else:
+        dt = dt.astimezone(timezone.utc)
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 class Pedido(db.Model):
@@ -80,7 +93,7 @@ class Pedido(db.Model):
             "total": round(self.total or 0, 2),
             "status": self.status,
             "status_label": STATUS_LABELS.get(self.status, self.status),
-            "criado_em": self.criado_em.isoformat() if self.criado_em else None,
+            "criado_em": format_iso_utc(self.criado_em),
             "pago": bool(self.pago),
         }
         if incluir_itens:

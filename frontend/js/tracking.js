@@ -99,7 +99,7 @@ function renderPedidoAcompanhamento(pedido) {
         </div>
     `).join('');
 
-    const criado = pedido.criado_em ? new Date(pedido.criado_em).toLocaleString('pt-BR') : '';
+    const criado = pedido.criado_em ? new Date(pedido.criado_em.endsWith("Z") ? pedido.criado_em : pedido.criado_em + "Z").toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '';
 
     const msgWhatsapp = encodeURIComponent(`Olá! Gostaria de informações sobre o meu pedido #${pedido.id}.`);
 
