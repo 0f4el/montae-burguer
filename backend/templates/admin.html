@@ -33,6 +33,49 @@
         /* Oculta barra de rolagem em abas mobile mantendo scroll suave */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* ESTILOS DE IMPRESSÃO TÉRMICA (BOBINA 58mm ESC/POS) */
+        #comanda-termica-print {
+            display: none;
+        }
+        @media print {
+            html, body {
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
+            }
+            body > *:not(#comanda-termica-print) {
+                display: none !important;
+            }
+            #comanda-termica-print {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                max-width: 52mm !important;
+                margin: 0 auto !important;
+                padding: 1mm 2mm !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                font-family: 'Courier New', Courier, monospace, sans-serif !important;
+                font-size: 11px !important;
+                line-height: 1.25 !important;
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important;
+                page-break-before: avoid !important;
+            }
+            #comanda-termica-print * {
+                box-sizing: border-box !important;
+            }
+            @page {
+                margin: 0mm;
+                size: auto;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen bg-[#0d1117] text-[#e6edf3] font-sans md:h-screen md:overflow-hidden flex flex-col antialiased">
@@ -164,6 +207,9 @@
             <div id="col-finalizado" class="kanban-list flex-1 min-h-[140px] space-y-2.5 overflow-y-auto p-2.5 sm:p-3 overscroll-contain" data-status="finalizado"></div>
         </section>
     </main>
+
+    <!-- CONTAINER INVISÍVEL PARA IMPRESSÃO TÉRMICA -->
+    <div id="comanda-termica-print"></div>
 
     <!-- MODAL DETALHE DO PEDIDO (MOBILE-OPTIMIZED) -->
     <div id="pedido-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4">
@@ -450,6 +496,9 @@
                         <button type="button" onclick="abrirDetalhe(${pedido.id})" class="flex-1 rounded-xl border border-[#30363d] bg-[#161b22] py-2 text-[11px] font-black uppercase tracking-wider text-gray-200 hover:border-[#FF9F0D] hover:text-[#FF9F0D] transition active:scale-95 flex items-center justify-center gap-1">
                             <i class="fa-solid fa-eye text-xs"></i> Detalhes
                         </button>
+                        <button type="button" onclick="imprimirComanda(${pedido.id})" class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-[11px] font-black text-amber-400 hover:bg-amber-500/20 transition active:scale-95" title="Imprimir Comanda Térmica">
+                            <i class="fa-solid fa-print"></i>
+                        </button>
                         <a href="${linkWhatsContexto}" target="_blank" rel="noopener noreferrer" class="flex-1 inline-flex items-center justify-center gap-1 rounded-xl border border-emerald-500/40 bg-emerald-500/10 py-2 text-[11px] font-black text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition active:scale-95 whitespace-nowrap" title="Notificar cliente no WhatsApp">
                             <i class="${acaoWhats.icon} text-xs"></i> ${acaoWhats.label}
                         </a>
@@ -734,6 +783,13 @@
                     <p class="text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2">Itens do Hambúrguer (${(pedido.hamburgueres || []).length})</p>
                     <div class="space-y-2 max-h-52 overflow-y-auto">${itens || '<p class="text-gray-500">Nenhum item listado.</p>'}</div>
                 </div>
+
+                <!-- BOTÃO IMPRIMIR COMANDA NO MODAL -->
+                <div class="pt-3 border-t border-[#30363d] flex gap-2">
+                    <button type="button" onclick="imprimirComanda(${pedido.id})" class="w-full rounded-xl border border-amber-500/40 bg-amber-500/10 py-2.5 text-xs font-black uppercase tracking-wider text-amber-400 hover:bg-amber-500/20 transition active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-print text-sm"></i> Imprimir Comanda Térmica
+                    </button>
+                </div>
             `;
 
             const modal = document.getElementById("pedido-modal");
@@ -845,9 +901,14 @@
                     <td class="px-3 py-2.5 font-black text-[#FF9F0D] whitespace-nowrap">${formatMoney(pedido.total)}</td>
                     <td class="px-3 py-2.5 whitespace-nowrap">${getStatusBadge(pedido.status)}</td>
                     <td class="px-3 py-2.5 text-center whitespace-nowrap">
-                        <button onclick="abrirDetalhe(${pedido.id})" class="rounded-lg border border-[#30363d] bg-[#0d1117] px-2.5 py-1 text-[11px] font-bold text-gray-300 hover:border-[#FF9F0D] hover:text-[#FF9F0D] transition active:scale-95" title="Ver Detalhes do Pedido">
-                            <i class="fa-solid fa-eye mr-1"></i> Detalhes
-                        </button>
+                        <div class="flex items-center justify-center gap-1">
+                            <button onclick="imprimirComanda(${pedido.id})" class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-400 hover:bg-amber-500/20 transition active:scale-95" title="Imprimir Comanda Térmica">
+                                <i class="fa-solid fa-print"></i>
+                            </button>
+                            <button onclick="abrirDetalhe(${pedido.id})" class="rounded-lg border border-[#30363d] bg-[#0d1117] px-2.5 py-1 text-[11px] font-bold text-gray-300 hover:border-[#FF9F0D] hover:text-[#FF9F0D] transition active:scale-95" title="Ver Detalhes do Pedido">
+                                <i class="fa-solid fa-eye mr-1"></i> Detalhes
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `).join("");
@@ -878,6 +939,82 @@
                     </div>
                 </div>
             `).join("");
+        }
+
+        // Função para Gerar e Imprimir Comanda Térmica (Padronizada para Bobina 58mm)
+        function imprimirComanda(id) {
+            const pedido = pedidosCache[id] || todosPedidosLista.find(p => p.id === Number(id));
+            if (!pedido) return;
+
+            const printContainer = document.getElementById("comanda-termica-print");
+            if (!printContainer) return;
+
+            const agora = formatDate(pedido.criado_em) || new Date().toLocaleString("pt-BR");
+            const isDelivery = pedido.forma_entrega === "Delivery";
+
+            let itensHTML = "";
+            (pedido.hamburgueres || []).forEach((item) => {
+                itensHTML += `
+                    <div style="margin-bottom: 6px; border-bottom: 1px dashed #000; padding-bottom: 4px;">
+                        <div style="font-weight: bold; font-size: 12px; display: flex; justify-content: space-between;">
+                            <span>${item.quantidade}x ${escapeHtml(item.titulo)}</span>
+                            <span>${formatMoney(item.preco * item.quantidade)}</span>
+                        </div>
+                        <div style="font-size: 10px; margin-top: 2px; line-height: 1.25;">
+                            <div>* Pao: <strong>${escapeHtml(item.pao || '-')}</strong> | Ponto: <strong>${escapeHtml(item.ponto || '-')}</strong></div>
+                            <div>* Queijo: <strong>${escapeHtml(item.queijo || '-')}</strong> | Cebola: <strong>${escapeHtml(item.cebola || '-')}</strong></div>
+                            <div>* Molho: <strong>${escapeHtml(item.molho_gratis || '-')}</strong></div>
+                            ${item.adicionais && item.adicionais !== "Nenhum" ? `<div style="font-weight: bold; margin-top: 1px;">+ Extras: ${escapeHtml(item.adicionais)}</div>` : ""}
+                            ${item.observacao ? `<div style="margin-top: 1px; font-style: italic;">* OBS: <strong>${escapeHtml(item.observacao)}</strong></div>` : ""}
+                        </div>
+                    </div>
+                `;
+            });
+
+            printContainer.innerHTML = `
+                <div style="text-align: center; margin-bottom: 6px;">
+                    <div style="font-size: 15px; font-weight: 900; letter-spacing: 0.5px;">* MONTAE BURGUER *</div>
+                    <div style="font-size: 10px; font-weight: bold;">=== COMANDA DE COZINHA ===</div>
+                </div>
+
+                <div style="border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 4px 0; margin-bottom: 5px; font-size: 11px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 13px;">
+                        <span>PEDIDO: #${pedido.id}</span>
+                        <span>[${isDelivery ? 'DELIVERY' : 'RETIRADA'}]</span>
+                    </div>
+                    <div>Data: ${agora}</div>
+                </div>
+
+                <div style="border-bottom: 1px dashed #000; padding-bottom: 4px; margin-bottom: 5px; font-size: 11px;">
+                    <div><strong>CLIENTE:</strong> ${escapeHtml(pedido.nome || '-')}</div>
+                    <div><strong>WHATSAPP:</strong> ${escapeHtml(pedido.whatsapp || '-')}</div>
+                    ${isDelivery && pedido.endereco ? `<div style="margin-top: 2px;"><strong>ENDERECO:</strong><br>${escapeHtml(pedido.endereco)}</div>` : ""}
+                    ${pedido.observacao ? `<div style="margin-top: 2px;"><strong>OBS GERAL:</strong> ${escapeHtml(pedido.observacao)}</div>` : ""}
+                </div>
+
+                <div style="margin-bottom: 4px;">
+                    <div style="font-weight: 900; font-size: 11px; text-transform: uppercase; margin-bottom: 3px;">ITENS:</div>
+                    ${itensHTML || '<div>Nenhum item</div>'}
+                </div>
+
+                <div style="border-top: 2px dashed #000; padding-top: 4px; font-size: 11px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Pagamento:</span>
+                        <strong>${escapeHtml(pedido.forma_pagamento || '-')} ${pedido.pago ? '(PAGO)' : '(PENDENTE)'}</strong>
+                    </div>
+                    ${pedido.troco ? `<div style="display: flex; justify-content: space-between;"><span>Troco para:</span><strong>${escapeHtml(pedido.troco)}</strong></div>` : ""}
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; margin-top: 3px;">
+                        <span>TOTAL:</span>
+                        <span>${formatMoney(pedido.total)}</span>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 8px; font-size: 9px; border-top: 1px dashed #000; padding-top: 4px;">
+                    <div>Obrigado pela preferencia!</div>
+                </div>
+            `;
+
+            window.print();
         }
 
         // Fechar modais com tecla Esc

@@ -8,6 +8,7 @@ from app import app, db, restaurante_aberto, expirar_pedidos_pendentes_antigos
 from models import Pedido, STATUS_AGUARDANDO_PAGAMENTO, STATUS_EXPIRADO
 
 def test_schedules():
+    os.environ["IGNORAR_HORARIO_FUNCIONAMENTO"] = "false"
     # Terça 19:00 BRT -> Fechado
     dt_terca = datetime(2026, 9, 8, 22, 0, tzinfo=timezone.utc)
     aberto_terca, msg = restaurante_aberto(dt_terca)
