@@ -30,17 +30,19 @@ function alternarTipoAcompanhamento() {
     const tipo = selectTipo ? selectTipo.value : 'whatsapp';
     input.value = '';
 
-    if (tipo === 'id') {
-        if (label) label.textContent = 'Número do Pedido (ID)';
-        input.placeholder = 'Ex: 12';
+    if (tipo === 'nome') {
+        if (label) label.textContent = 'Nome do Cliente';
+        input.placeholder = 'Ex: João Silva';
         input.type = 'text';
-        input.inputMode = 'numeric';
-        input.pattern = '[0-9]*';
-        input.removeAttribute('maxlength');
+        input.removeAttribute('inputmode');
+        input.removeAttribute('pattern');
+        input.setAttribute('maxlength', '80');
     } else {
         if (label) label.textContent = 'Número do WhatsApp';
         input.placeholder = 'Ex: (31) 9 9999 9999';
         input.type = 'tel';
+        input.removeAttribute('inputmode');
+        input.removeAttribute('pattern');
         input.setAttribute('maxlength', '16');
     }
 }
@@ -49,8 +51,6 @@ function handleTrackingInput(event) {
     const selectTipo = document.getElementById('tracking-type');
     if (selectTipo && selectTipo.value === 'whatsapp' && typeof handlePhoneMask === 'function') {
         handlePhoneMask(event);
-    } else if (selectTipo && selectTipo.value === 'id') {
-        event.target.value = event.target.value.replace(/\D/g, '');
     }
 }
 
@@ -151,7 +151,7 @@ async function buscarPedidoAcompanhamento(event) {
         }
 
         if (!data.pedidos || data.pedidos.length === 0) {
-            const labelTipo = tipo === 'whatsapp' ? 'WhatsApp' : 'ID';
+            const labelTipo = tipo === 'whatsapp' ? 'WhatsApp' : 'nome';
             results.innerHTML = `<p class="text-xs text-gray-400">Nenhum pedido encontrado com este ${labelTipo}.</p>`;
             return;
         }

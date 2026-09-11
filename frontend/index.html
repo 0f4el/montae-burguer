@@ -445,6 +445,170 @@
                     </div>
                 </div>
 
+                <!-- BLOCO: BEBIDAS (OPCIONAL) -->
+                <div>
+                    <h4 class="text-xs font-black text-[#FF9F0D] uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-bottle-water text-sm"></i> Bebidas (Opcional)
+                    </h4>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <!-- Coca-Cola 1L -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Coca-Cola 1L</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 12,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('coca-1l', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-coca-1l" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('coca-1l', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-coca-1l" data-name="Coca-Cola 1L" data-price="12.00" value="0">
+                        </div>
+
+                        <!-- Coca-Cola Zero 1L -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Coca-Cola Zero 1L</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 12,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('coca-zero-1l', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-coca-zero-1l" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('coca-zero-1l', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-coca-zero-1l" data-name="Coca-Cola Zero 1L" data-price="12.00" value="0">
+                        </div>
+
+                        <!-- Guaraná Antarctica 1L -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Guaraná Antarctica 1L</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 10,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('guarana-1l', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-guarana-1l" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('guarana-1l', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-guarana-1l" data-name="Guaraná Antarctica 1L" data-price="10.00" value="0">
+                        </div>
+
+                        <!-- Mate Couro 1L -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Mate Couro 1L</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 9,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('mate-couro-1l', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-mate-couro-1l" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('mate-couro-1l', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-mate-couro-1l" data-name="Mate Couro 1L" data-price="9.00" value="0">
+                        </div>
+
+                        <!-- H2OH! Limoneto 350ml -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">H2OH! Limoneto 350ml</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 7,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('h2o-limoneto', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-h2o-limoneto" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('h2o-limoneto', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-h2o-limoneto" data-name="H2OH! Limoneto 350ml" data-price="7.00" value="0">
+                        </div>
+
+                        <!-- Suco Lata 350ml (Uva) -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Suco Lata 350ml (Uva)</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 8,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('suco-lata-uva', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-suco-lata-uva" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('suco-lata-uva', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-suco-lata-uva" data-name="Suco Lata (Uva)" data-price="8.00" value="0">
+                        </div>
+
+                        <!-- Suco Lata 350ml (Manga) -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Suco Lata 350ml (Manga)</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 8,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('suco-lata-manga', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-suco-lata-manga" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('suco-lata-manga', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-suco-lata-manga" data-name="Suco Lata (Manga)" data-price="8.00" value="0">
+                        </div>
+
+                        <!-- Suco Lata 350ml (Pêssego) -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Suco Lata 350ml (Pêssego)</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 8,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('suco-lata-pessego', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-suco-lata-pessego" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('suco-lata-pessego', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-suco-lata-pessego" data-name="Suco Lata (Pêssego)" data-price="8.00" value="0">
+                        </div>
+
+                        <!-- Suco Caixinha 250ml (Uva) -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Suco Caixinha 250ml (Uva)</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 5,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('suco-caixa-uva', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-suco-caixa-uva" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('suco-caixa-uva', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-suco-caixa-uva" data-name="Suco Caixinha 250ml (Uva)" data-price="5.00" value="0">
+                        </div>
+
+                        <!-- Suco Caixinha 250ml (Manga) -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Suco Caixinha 250ml (Manga)</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 5,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('suco-caixa-manga', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-suco-caixa-manga" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('suco-caixa-manga', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-suco-caixa-manga" data-name="Suco Caixinha 250ml (Manga)" data-price="5.00" value="0">
+                        </div>
+
+                        <!-- Suco Caixinha 250ml (Goiaba) -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Suco Caixinha 250ml (Goiaba)</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 5,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('suco-caixa-goiaba', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-suco-caixa-goiaba" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('suco-caixa-goiaba', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-suco-caixa-goiaba" data-name="Suco Caixinha 250ml (Goiaba)" data-price="5.00" value="0">
+                        </div>
+
+                    </div>
+                </div>
+
                 <!-- BLOCO 3: OBSERVAÇÕES DO ITEM (NOVO) -->
                 <div>
                     <h4 class="text-xs font-black text-white uppercase tracking-wider mb-2.5 flex items-center gap-2">
@@ -468,11 +632,11 @@
                     
                     <div class="flex items-center gap-2 sm:gap-3 flex-1 justify-end max-w-xs sm:max-w-none">
                         <div class="flex items-center bg-black/60 border border-neutral-700 rounded-xl p-1 shadow-inner shrink-0">
-                            <button type="button" onclick="changeBuilderQuantity(-1)" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white font-black transition flex items-center justify-center text-sm sm:text-base cursor-pointer">
+                            <button type="button" onclick="changeBuilderQuantity(-1)" title="Diminuir quantidade" aria-label="Diminuir quantidade" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white font-black transition flex items-center justify-center text-sm sm:text-base cursor-pointer">
                                 <i class="fa-solid fa-minus"></i>
                             </button>
                             <span id="builder-quantity" class="w-7 sm:w-10 text-center font-black text-white text-sm sm:text-base">1</span>
-                            <button type="button" onclick="changeBuilderQuantity(1)" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white font-black transition flex items-center justify-center text-sm sm:text-base cursor-pointer">
+                            <button type="button" onclick="changeBuilderQuantity(1)" title="Aumentar quantidade" aria-label="Aumentar quantidade" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white font-black transition flex items-center justify-center text-sm sm:text-base cursor-pointer">
                                 <i class="fa-solid fa-plus"></i>
                             </button>
                         </div>
@@ -837,7 +1001,7 @@
                         <select id="tracking-type" onchange="alternarTipoAcompanhamento()"
                             class="w-full bg-black/60 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#FF9F0D] cursor-pointer">
                             <option value="whatsapp" selected>WhatsApp</option>
-                            <option value="id">ID do Pedido</option>
+                            <option value="nome">Nome</option>
                         </select>
                     </div>
                     <div class="sm:col-span-2">

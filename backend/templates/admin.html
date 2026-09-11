@@ -397,6 +397,13 @@
             const acaoWhats = obterAcaoWhatsStatus(pedido);
             const linkWhatsContexto = gerarLinkWhatsApp(pedido, acaoWhats.tipo);
             const linkWhatsGeral = gerarLinkWhatsApp(pedido, "contato");
+            const resumoItens = (pedido.hamburgueres || []).map(item => {
+                let txt = `${escapeHtml(item.quantidade)}x ${escapeHtml(item.titulo)}`;
+                if (item.adicionais && item.adicionais !== "Nenhum") {
+                    txt += ` (+ ${escapeHtml(item.adicionais)})`;
+                }
+                return txt;
+            }).join(" · ");
 
             // Opções para mudança rápida de status direto no card
             const statusOptions = [
@@ -410,14 +417,17 @@
             return `
                 <article class="pedido-card rounded-2xl border border-[#30363d] bg-[#0d1117] p-3 shadow-md hover:border-[#FF9F0D]/70 transition relative" data-id="${pedido.id}">
                     <div class="mb-2 flex items-start justify-between gap-2">
-                        <div>
+                        <div class="flex-1">
                             <div class="flex items-center gap-1.5">
                                 <span class="text-[11px] font-black text-[#FF9F0D]">#${escapeHtml(pedido.id)}</span>
                                 <span class="rounded bg-[#161b22] px-1.5 py-0.5 text-[9px] font-bold text-gray-300 border border-[#30363d]">${escapeHtml(entrega)}</span>
                             </div>
                             <h3 class="text-sm font-black text-white mt-0.5 leading-snug">${escapeHtml(pedido.nome)}</h3>
+                            <p class="text-[11px] text-gray-300 font-medium line-clamp-2 mt-1 bg-[#161b22] px-2 py-1 rounded-lg border border-[#30363d]/70">
+                                <i class="fa-solid fa-burger text-[#FF9F0D] text-[10px] mr-1"></i>${resumoItens || "1x Combo"}
+                            </p>
                         </div>
-                        <p class="text-xs font-black text-[#FF9F0D]">${formatMoney(pedido.total)}</p>
+                        <p class="text-xs font-black text-[#FF9F0D] shrink-0">${formatMoney(pedido.total)}</p>
                     </div>
 
                     <div class="flex items-center justify-between text-[11px] text-gray-400 py-1 border-t border-[#30363d]/50">
@@ -632,7 +642,7 @@
                     <div class="mt-1.5 space-y-0.5 text-[11px] text-gray-400">
                         <p>Pão: <span class="text-white">${escapeHtml(item.pao || "-")}</span> · Ponto: <span class="text-white">${escapeHtml(item.ponto || "-")}</span></p>
                         <p>Cebola: <span class="text-white">${escapeHtml(item.cebola || "-")}</span> · Queijo: <span class="text-white">${escapeHtml(item.queijo || "-")}</span> · Molho: <span class="text-white">${escapeHtml(item.molho_gratis || "-")}</span></p>
-                        ${item.adicionais && item.adicionais !== "Nenhum" ? `<p>Extras: <span class="text-[#FF9F0D] font-bold">${escapeHtml(item.adicionais)}</span></p>` : ""}
+                        ${item.adicionais && item.adicionais !== "Nenhum" ? `<p>Extras / Bebidas: <span class="text-[#FF9F0D] font-bold">${escapeHtml(item.adicionais)}</span></p>` : ""}
                         ${item.observacao ? `<p class="text-amber-300 italic">Obs: ${escapeHtml(item.observacao)}</p>` : ""}
                     </div>
                 </div>

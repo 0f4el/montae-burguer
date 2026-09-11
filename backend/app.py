@@ -7,7 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from flask_cors import CORS
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
 from models import (
     STATUS_AGUARDANDO_APROVACAO,
@@ -67,7 +67,7 @@ def restaurante_aberto(dt=None):
     Sábado: 18:30 às 00:00 (23:59:59)
     Domingo: 18:30 às 23:00
     """
-    if os.getenv("IGNORAR_HORARIO_FUNCIONAMENTO", "false").lower() in ("true", "1", "yes"):
+    if os.getenv("IGNORAR_HORARIO_FUNCIONAMENTO", "true").lower() in ("true", "1", "yes"):
         return True, ""
 
     now_utc = dt or agora_utc()
@@ -170,7 +170,10 @@ def ativar_pedido_pago(pedido, capture_method=None):
     return pedido
 
 
+import unicodedata
+
 TABELA_PRECOS_ADICIONAIS = {
+    # Extras do Hambúrguer
     "ovo extra": 4.00,
     "bacon extra": 5.00,
     "queijo cheddar extra": 4.00,
@@ -181,7 +184,51 @@ TABELA_PRECOS_ADICIONAIS = {
     "cebola caramelizada extra": 3.50,
     "baconese extra": 3.00,
     "maionese temperada extra": 3.00,
+    
+    # Bebidas
+    "coca-cola 1l": 12.00,
+    "coca cola 1l": 12.00,
+    "coca-cola zero 1l": 12.00,
+    "coca cola zero 1l": 12.00,
+    "guarana antarctica 1l": 10.00,
+    "guaraná antarctica 1l": 10.00,
+    "quarana antarctica 1l": 10.00,
+    "quarana antárctica 1l": 10.00,
+    "mate couro 1l": 9.00,
+    "suco lata (uva)": 8.00,
+    "suco lata uva": 8.00,
+    "suco lata (manga)": 8.00,
+    "suco lata manga": 8.00,
+    "suco lata (pêssego)": 8.00,
+    "suco lata (pessego)": 8.00,
+    "suco lata pessego": 8.00,
+    "suco caixinha 250ml (uva)": 5.00,
+    "suco caixinha 250ml uva": 5.00,
+    "suco caixinha 250 ml (uva)": 5.00,
+    "suco caixinha 250 ml uva": 5.00,
+    "suco caixinha 250ml (manga)": 5.00,
+    "suco caixinha 250ml manga": 5.00,
+    "suco caixinha 250 ml (manga)": 5.00,
+    "suco caixinha 250 ml manga": 5.00,
+    "suco caixinha 250ml (goiaba)": 5.00,
+    "suco caixinha 250ml goiaba": 5.00,
+    "suco caixinha 250 ml (goiaba)": 5.00,
+    "suco caixinha 250 ml goiaba": 5.00,
+    "h2oh! limoneto 350ml": 7.00,
+    "h2oh limoneto 350ml": 7.00,
+    "h2o limoneto 350ml": 7.00,
+    "h2o limoneto 350 ml": 7.00,
 }
+
+def normalizar_chave_adicional(texto):
+    if not texto:
+        return ""
+    t = unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('ASCII')
+    t = re.sub(r'[^\w\s\d]', ' ', t.lower())
+    return re.sub(r'\s+', ' ', t).strip()
+
+TABELA_NORMALIZADA = {normalizar_chave_adicional(k): v for k, v in TABELA_PRECOS_ADICIONAIS.items()}
+
 PRECO_BASE_COMBO = 29.90
 PRECO_ITEM_TESTE = 1.00
 
@@ -200,11 +247,16 @@ def calcular_preco_unitario_item(titulo, adicionais_str):
         match = re.match(r"^(\d+)\s*x\s*(.*)$", part, re.IGNORECASE)
         if match:
             qty = int(match.group(1))
-            nome_extra = match.group(2).strip().lower()
+            nome_extra = match.group(2).strip()
         else:
             qty = 1
-            nome_extra = part.lower()
-        preco_extra = TABELA_PRECOS_ADICIONAIS.get(nome_extra, 0.0)
+            nome_extra = part.strip()
+        
+        # Busca direta ou normalizada
+        preco_extra = TABELA_PRECOS_ADICIONAIS.get(nome_extra.lower())
+        if preco_extra is None:
+            preco_extra = TABELA_NORMALIZADA.get(normalizar_chave_adicional(nome_extra), 0.0)
+        
         preco += qty * preco_extra
     return round(preco, 2)
 
@@ -388,34 +440,30 @@ def acompanhar_pedido():
     consulta = str(data.get("consulta") or data.get("q") or "").strip()
     digits = somente_digitos(consulta)
 
-    if not digits:
-        return erro("Informe o WhatsApp ou o ID do pedido.")
+    if not consulta:
+        return erro("Informe o WhatsApp ou o Nome para acompanhar o pedido.")
 
     filtros = []
 
-    if tipo == "id":
-        try:
-            filtros.append(Pedido.id == int(digits))
-        except (ValueError, OverflowError):
-            return erro("Número de pedido inválido.")
+    if tipo == "nome":
+        if len(consulta) < 2:
+            return erro("Informe pelo menos 2 caracteres do nome para buscar.")
+        filtros.append(func.lower(func.trim(Pedido.nome)) == consulta.lower())
     elif tipo == "whatsapp":
-        if len(digits) < 8:
+        if not digits or len(digits) < 8:
             return erro("Informe um número de WhatsApp válido (mínimo 8 dígitos).")
         termo_whatsapp = digits[-11:] if len(digits) >= 11 else digits
         filtros.append(Pedido.whatsapp_digits.contains(termo_whatsapp))
     else:
         # Fallback genérico se o tipo não for especificado
-        if len(digits) <= 7:
-            try:
-                filtros.append(Pedido.id == int(digits))
-            except (ValueError, OverflowError):
-                pass
-        if len(digits) >= 8:
+        if digits and len(digits) >= 8:
             termo_whatsapp = digits[-11:] if len(digits) >= 11 else digits
             filtros.append(Pedido.whatsapp_digits.contains(termo_whatsapp))
+        if len(consulta) >= 2:
+            filtros.append(func.lower(func.trim(Pedido.nome)) == consulta.lower())
 
     if not filtros:
-        return erro("Informe um WhatsApp válido ou o número do pedido.")
+        return erro("Informe um WhatsApp válido ou o seu nome.")
 
     pedidos = (
         Pedido.query.filter(or_(*filtros))
