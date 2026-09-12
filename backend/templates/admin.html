@@ -1075,6 +1075,7 @@
         ${itensHTML || '<div>Nenhum item</div>'}
     </div>
     <div style="border-top: 2px dashed #000; padding-top: 4px; font-size: 11px;">
+        ${isDelivery ? `<div style="display: flex; justify-content: space-between;"><span>Frete:</span><strong>${formatMoney(pedido.taxa_entrega)}</strong></div>` : ""}
         <div style="display: flex; justify-content: space-between;">
             <span>Pagamento:</span>
             <strong>${escapeHtml(pedido.forma_pagamento || '-')} ${pedido.pago ? '(PAGO)' : '(PENDENTE)'}</strong>
