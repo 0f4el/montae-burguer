@@ -101,6 +101,31 @@ class Pedido(db.Model):
         return payload
 
 
+class Configuracao(db.Model):
+    __tablename__ = "configuracoes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    chave = db.Column(db.String(80), unique=True, nullable=False)
+    valor = db.Column(db.String(255), nullable=False)
+    atualizado_em = db.Column(db.DateTime, nullable=False, default=agora_utc, onupdate=agora_utc)
+
+    @staticmethod
+    def get(chave, default="false"):
+        """Retorna o valor de uma configuração ou o padrão"""
+        cfg = Configuracao.query.filter_by(chave=chave).first()
+        return cfg.valor if cfg else default
+
+    @staticmethod
+    def set(chave, valor):
+        """Define ou atualiza uma configuração"""
+        cfg = Configuracao.query.filter_by(chave=chave).first()
+        if cfg:
+            cfg.valor = str(valor)
+        else:
+            cfg = Configuracao(chave=chave, valor=str(valor))
+            db.session.add(cfg)
+        db.session.commit()
+
 class ItemPedido(db.Model):
     __tablename__ = "itens_pedido"
 

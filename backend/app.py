@@ -15,6 +15,7 @@ from models import (
     STATUS_CANCELADO,
     STATUS_EXPIRADO,
     STATUS_KANBAN,
+    Configuracao,
     ItemPedido,
     Pedido,
     agora_utc,
@@ -67,8 +68,16 @@ def restaurante_aberto(dt=None):
     Sexta: 18:30 às 00:00 (23:59:59)
     Sábado: 18:30 às 00:00 (23:59:59)
     Domingo: 18:30 às 23:00
+    
+    Pode ser desativado pelo admin através do painel.
     """
-    if os.getenv("IGNORAR_HORARIO_FUNCIONAMENTO", "true").lower() in ("true", "1", "yes"):
+    # Verifica se a validação de horário está desativada (configuração do banco tem prioridade)
+    ignorar = Configuracao.get("ignorar_horario_funcionamento", "false").lower()
+    if ignorar in ("true", "1", "yes"):
+        return True, ""
+    
+    # Fallback para variável de ambiente (compatibilidade)
+    if os.getenv("IGNORAR_HORARIO_FUNCIONAMENTO", "false").lower() in ("true", "1", "yes"):
         return True, ""
 
     now_utc = dt or agora_utc()
@@ -546,6 +555,32 @@ def admin_listar_todos_pedidos():
     pedidos = Pedido.query.order_by(Pedido.criado_em.desc()).all()
     return jsonify({"pedidos": [pedido.to_dict() for pedido in pedidos]})
 
+
+@app.get("/api/admin/configuracoes/horario-funcionamento")
+@login_admin_obrigatorio
+def obter_config_horario():
+    """Retorna o estado atual da validação de horário de funcionamento"""
+    ignorar = Configuracao.get("ignorar_horario_funcionamento", "false")
+    return jsonify({
+        "ignorar_horario_funcionamento": ignorar.lower() in ("true", "1", "yes"),
+        "aberto_agora": restaurante_aberto()[0]
+    })
+
+@app.post("/api/admin/configuracoes/horario-funcionamento")
+@login_admin_obrigatorio
+def atualizar_config_horario():
+    """Ativa ou desativa a validação de horário de funcionamento"""
+    data = request.get_json(silent=True) or {}
+    ignorar = data.get("ignorar", False)
+    
+    Configuracao.set("ignorar_horario_funcionamento", "true" if ignorar else "false")
+    
+    return jsonify({
+        "success": True,
+        "ignorar_horario_funcionamento": ignorar,
+        "mensagem": "Horário de funcionamento desativado. Loja aceita pedidos 24/7." if ignorar 
+                   else "Horário de funcionamento ativado. Loja só aceita pedidos no horário configurado."
+    })
 
 @app.patch("/api/admin/pedidos/<int:pedido_id>/status")
 @login_admin_obrigatorio

@@ -98,6 +98,12 @@
 
             <!-- Ações Header -->
             <div class="flex items-center gap-1.5 sm:gap-2">
+                <!-- Toggle Horário de Funcionamento -->
+                <button onclick="toggleHorarioFuncionamento()" id="btn-toggle-horario" class="rounded-lg border border-[#30363d] bg-[#161b22] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95" title="Ativar/Desativar validação de horário">
+                    <i class="fa-solid fa-clock" id="icon-horario"></i>
+                    <span id="label-horario">Horário ativado</span>
+                </button>
+                
                 <button onclick="abrirModalTodosPedidos()" class="rounded-lg border border-[#30363d] bg-[#161b22] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-bold text-[#FF9F0D] hover:border-[#FF9F0D] hover:bg-[#FF9F0D]/10 transition flex items-center gap-1.5 shadow-sm active:scale-95" title="Ver histórico completo de pedidos">
                     <i class="fa-solid fa-table-list"></i>
                     <span class="hidden sm:inline">Todos os Pedidos</span>
@@ -348,6 +354,78 @@
         let pedidosCache = {};
         let todosPedidosLista = [];
         let abaMobileAtiva = 'todas';
+
+        function atualizarBotaoHorario(config) {
+            const botao = document.getElementById("btn-toggle-horario");
+            const icone = document.getElementById("icon-horario");
+            const label = document.getElementById("label-horario");
+            if (!botao || !icone || !label) return;
+
+            const horarioDesativado = Boolean(config?.ignorar_horario_funcionamento);
+            botao.dataset.ignorarHorario = String(horarioDesativado);
+
+            if (horarioDesativado) {
+                botao.className = "rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-bold text-emerald-400 transition flex items-center gap-1.5 shadow-sm active:scale-95";
+                botao.title = "Horário desativado: a loja aceita pedidos a qualquer momento. Clique para reativar o horário.";
+                icone.className = "fa-solid fa-store";
+                label.textContent = "Horário desativado";
+            } else {
+                botao.className = "rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-bold text-amber-400 transition flex items-center gap-1.5 shadow-sm active:scale-95";
+                botao.title = "Horário ativado: a loja segue o horário configurado. Clique para liberar pedidos 24h.";
+                icone.className = "fa-solid fa-clock";
+                label.textContent = "Horário ativado";
+            }
+        }
+
+        async function carregarConfigHorario() {
+            try {
+                const response = await fetch("/api/admin/configuracoes/horario-funcionamento", {
+                    credentials: "same-origin"
+                });
+                if (response.status === 401) {
+                    window.location.href = "/admin/login";
+                    return;
+                }
+                if (!response.ok) {
+                    throw new Error("Não foi possível carregar a configuração de horário.");
+                }
+                const config = await response.json();
+                atualizarBotaoHorario(config);
+            } catch (error) {
+                console.error("Erro ao carregar configuração de horário:", error);
+            }
+        }
+
+        async function toggleHorarioFuncionamento() {
+            const botao = document.getElementById("btn-toggle-horario");
+            if (!botao || botao.disabled) return;
+
+            const horarioDesativadoAtual = botao.dataset.ignorarHorario === "true";
+            const proximoEstado = !horarioDesativadoAtual;
+            botao.disabled = true;
+
+            try {
+                const response = await fetch("/api/admin/configuracoes/horario-funcionamento", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ignorar: proximoEstado })
+                });
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.detail || "Não foi possível atualizar o horário.");
+                }
+
+                atualizarBotaoHorario(data);
+                alert(data.mensagem || "Configuração de horário atualizada.");
+            } catch (error) {
+                console.error("Erro ao atualizar configuração de horário:", error);
+                alert(error.message || "Não foi possível atualizar o horário.");
+            } finally {
+                botao.disabled = false;
+            }
+        }
 
         const STORAGE_FINALIZADOS_OCULTOS = "montae_finalizados_ocultos_v1";
 
@@ -1122,6 +1200,7 @@
 
         // Inicialização
         iniciarSortable();
+        carregarConfigHorario();
         carregarPedidos();
         setInterval(carregarPedidos, 8000);
     </script>
