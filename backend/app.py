@@ -556,6 +556,105 @@ def admin_listar_todos_pedidos():
     return jsonify({"pedidos": [pedido.to_dict() for pedido in pedidos]})
 
 
+@app.get("/api/admin/dashboard")
+@login_admin_obrigatorio
+def admin_dashboard():
+    """Retorna estatísticas do comércio para o dashboard administrativo"""
+    fuso_br = timezone(timedelta(hours=-3))
+    agora_br = agora_utc().astimezone(fuso_br)
+    inicio_hoje = agora_br.replace(hour=0, minute=0, second=0, microsecond=0)
+    inicio_semana = inicio_hoje - timedelta(days=agora_br.weekday())
+    inicio_mes = agora_br.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # Converter para UTC para consultas no banco
+    inicio_hoje_utc = inicio_hoje.astimezone(timezone.utc)
+    inicio_semana_utc = inicio_semana.astimezone(timezone.utc)
+    inicio_mes_utc = inicio_mes.astimezone(timezone.utc)
+
+    # Status que representam vendas efetivas (não cancelados/expirados/aguardando)
+    status_venda = [
+        STATUS_AGUARDANDO_APROVACAO, "em_preparacao",
+        "pronto_para_retirada", "saiu_para_entrega", "finalizado",
+    ]
+
+    def stats_periodo(inicio_utc):
+        pedidos = Pedido.query.filter(
+            Pedido.criado_em >= inicio_utc,
+            Pedido.status.in_(status_venda),
+        ).all()
+        total_vendas = round(sum(p.total for p in pedidos), 2)
+        total_pedidos = len(pedidos)
+        ticket_medio = round(total_vendas / total_pedidos, 2) if total_pedidos else 0
+        delivery = sum(1 for p in pedidos if p.forma_entrega == "Delivery")
+        retirada = total_pedidos - delivery
+        pix = sum(1 for p in pedidos if "pix" in (p.forma_pagamento or "").lower())
+        dinheiro = sum(1 for p in pedidos if p.forma_pagamento == "dinheiro")
+        cartao = sum(1 for p in pedidos if "cartao" in (p.forma_pagamento or "").lower())
+        return {
+            "total_vendas": total_vendas,
+            "total_pedidos": total_pedidos,
+            "ticket_medio": ticket_medio,
+            "delivery": delivery,
+            "retirada": retirada,
+            "pix": pix,
+            "dinheiro": dinheiro,
+            "cartao": cartao,
+        }
+
+    hoje = stats_periodo(inicio_hoje_utc)
+    semana = stats_periodo(inicio_semana_utc)
+    mes = stats_periodo(inicio_mes_utc)
+
+    # Vendas dos últimos 7 dias (para gráfico)
+    vendas_por_dia = []
+    for i in range(6, -1, -1):
+        dia = inicio_hoje - timedelta(days=i)
+        dia_seguinte = dia + timedelta(days=1)
+        dia_utc = dia.astimezone(timezone.utc)
+        dia_seguinte_utc = dia_seguinte.astimezone(timezone.utc)
+        pedidos_dia = Pedido.query.filter(
+            Pedido.criado_em >= dia_utc,
+            Pedido.criado_em < dia_seguinte_utc,
+            Pedido.status.in_(status_venda),
+        ).all()
+        vendas_por_dia.append({
+            "data": dia.strftime("%d/%m"),
+            "dia_semana": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"][dia.weekday()],
+            "total": round(sum(p.total for p in pedidos_dia), 2),
+            "pedidos": len(pedidos_dia),
+        })
+
+    # Pedidos recentes (últimos 5 finalizados)
+    recentes = Pedido.query.filter(
+        Pedido.status == "finalizado"
+    ).order_by(Pedido.atualizado_em.desc()).limit(5).all()
+
+    # Totais gerais (all time)
+    total_geral = Pedido.query.filter(Pedido.status.in_(status_venda)).count()
+    receita_geral = db.session.query(
+        func.coalesce(func.sum(Pedido.total), 0)
+    ).filter(Pedido.status.in_(status_venda)).scalar()
+
+    # Pedidos cancelados hoje
+    cancelados_hoje = Pedido.query.filter(
+        Pedido.criado_em >= inicio_hoje_utc,
+        Pedido.status.in_([STATUS_CANCELADO, STATUS_EXPIRADO]),
+    ).count()
+
+    return jsonify({
+        "hoje": hoje,
+        "semana": semana,
+        "mes": mes,
+        "vendas_por_dia": vendas_por_dia,
+        "recentes": [p.to_dict(incluir_itens=False) for p in recentes],
+        "totais": {
+            "pedidos": total_geral,
+            "receita": round(float(receita_geral), 2),
+        },
+        "cancelados_hoje": cancelados_hoje,
+        "hora_servidor": agora_br.strftime("%H:%M"),
+    })
+
 @app.get("/api/admin/configuracoes/horario-funcionamento")
 @login_admin_obrigatorio
 def obter_config_horario():

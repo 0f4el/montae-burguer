@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .kanban-list {
             scrollbar-width: thin;
@@ -98,6 +99,11 @@
 
             <!-- Ações Header -->
             <div class="flex items-center gap-1.5 sm:gap-2">
+                <button onclick="abrirDashboard()" class="rounded-lg border border-[#30363d] bg-[#161b22] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-bold text-sky-400 hover:border-sky-400 hover:bg-sky-400/10 transition flex items-center gap-1.5 shadow-sm active:scale-95" title="Ver Painel de Vendas e Estatísticas">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span class="hidden sm:inline">Dashboard</span>
+                </button>
+                
                 <!-- Toggle Horário de Funcionamento -->
                 <button onclick="toggleHorarioFuncionamento()" id="btn-toggle-horario" class="rounded-lg border border-[#30363d] bg-[#161b22] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95" title="Ativar/Desativar validação de horário">
                     <i class="fa-solid fa-clock" id="icon-horario"></i>
@@ -252,6 +258,178 @@
                 </button>
             </div>
             <div id="modal-corpo" class="space-y-3 text-xs text-gray-300"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DASHBOARD ESTATÍSTICAS -->
+    <div id="modal-dashboard" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200">
+        <div class="flex flex-col h-[94vh] sm:h-[90vh] w-full max-w-6xl overflow-hidden rounded-2xl border border-[#30363d] bg-[#0d1117] shadow-2xl">
+            <!-- Header Dashboard -->
+            <div class="flex items-center justify-between gap-3 border-b border-[#30363d] p-3 sm:p-4 bg-[#161b22]">
+                <div class="flex items-center gap-2.5">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/20 border border-sky-500/40 text-sky-400">
+                        <i class="fa-solid fa-chart-pie"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm sm:text-base font-black text-white">Dashboard de Vendas</h3>
+                        <p class="text-[10px] sm:text-[11px] text-gray-400">Estatísticas, receitas e volume de pedidos</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 sm:gap-2">
+                    <span id="dash-hora-servidor" class="hidden sm:inline text-[10px] font-bold text-gray-500 mr-2 border border-gray-700 bg-gray-800/50 px-2 py-1 rounded-lg">...</span>
+                    <button onclick="carregarDashboard()" class="rounded-lg border border-[#30363d] bg-[#0d1117] px-2.5 py-1.5 text-xs font-bold text-gray-300 hover:border-sky-400 hover:text-sky-400 transition active:scale-95 flex items-center gap-1.5">
+                        <i class="fa-solid fa-rotate-right" id="icon-dash-refresh"></i> <span class="hidden sm:inline">Atualizar</span>
+                    </button>
+                    <button onclick="fecharDashboard()" class="rounded-lg border border-[#30363d] bg-[#0d1117] w-8 h-8 flex items-center justify-center text-xs font-bold text-gray-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/50 transition active:scale-95" title="Fechar dashboard">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Corpo Dashboard -->
+            <div class="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 sm:space-y-6 bg-[#010409]">
+                <!-- Loading State -->
+                <div id="dash-loading" class="flex flex-col items-center justify-center py-20">
+                    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-sky-500 mb-4"></i>
+                    <p class="text-sm font-bold text-gray-400">Calculando estatísticas...</p>
+                </div>
+
+                <!-- Conteúdo (Oculto inicialmente) -->
+                <div id="dash-content" class="hidden space-y-5 sm:space-y-6">
+                    
+                    <!-- Resumo Hoje -->
+                    <div>
+                        <h4 class="text-xs font-black uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2"><i class="fa-regular fa-calendar-day text-emerald-400"></i> Desempenho de Hoje</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                            <!-- Card Vendas Hoje -->
+                            <div class="rounded-xl border border-emerald-500/20 bg-[#161b22] px-4 py-3 relative overflow-hidden">
+                                <div class="absolute -right-2 -top-2 text-emerald-500/10 text-6xl"><i class="fa-solid fa-dollar-sign"></i></div>
+                                <p class="text-[10px] font-black uppercase text-gray-400 relative z-10">Receita Hoje</p>
+                                <p id="dash-hoje-vendas" class="mt-1 text-lg sm:text-2xl font-black text-emerald-400 relative z-10 hidden sm:block">R$ 0,00</p>
+                                <p id="dash-hoje-vendas-mobile" class="mt-1 text-base font-black text-emerald-400 relative z-10 sm:hidden">R$ 0,00</p>
+                            </div>
+                            <!-- Card Pedidos Hoje -->
+                            <div class="rounded-xl border border-sky-500/20 bg-[#161b22] px-4 py-3 relative overflow-hidden">
+                                <div class="absolute -right-2 -top-2 text-sky-500/10 text-5xl"><i class="fa-solid fa-burger"></i></div>
+                                <p class="text-[10px] font-black uppercase text-gray-400 relative z-10">Pedidos Hoje</p>
+                                <p id="dash-hoje-pedidos" class="mt-1 text-xl sm:text-2xl font-black text-sky-400 relative z-10">0</p>
+                            </div>
+                            <!-- Card Ticket Médio -->
+                            <div class="rounded-xl border border-purple-500/20 bg-[#161b22] px-4 py-3 relative overflow-hidden">
+                                <div class="absolute -right-2 -top-2 text-purple-500/10 text-5xl"><i class="fa-solid fa-receipt"></i></div>
+                                <p class="text-[10px] font-black uppercase text-gray-400 relative z-10">Ticket Médio</p>
+                                <p id="dash-hoje-ticket" class="mt-1 text-lg sm:text-xl font-black text-purple-400 relative z-10">R$ 0,00</p>
+                            </div>
+                            <!-- Card Cancelamentos -->
+                            <div class="rounded-xl border border-rose-500/20 bg-[#161b22] px-4 py-3 relative overflow-hidden">
+                                <div class="absolute -right-2 -top-2 text-rose-500/10 text-5xl"><i class="fa-solid fa-ban"></i></div>
+                                <p class="text-[10px] font-black uppercase text-gray-400 relative z-10">Cancelados/Exp</p>
+                                <p id="dash-hoje-cancelados" class="mt-1 text-xl sm:text-2xl font-black text-rose-400 relative z-10">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                        
+                        <!-- Coluna 1: Gráfico e Períodos -->
+                        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
+                            <!-- Gráfico -->
+                            <div class="rounded-2xl border border-[#30363d] bg-[#161b22] p-4 sm:p-5">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-xs font-black uppercase tracking-wider text-gray-300"><i class="fa-solid fa-chart-column text-[#FF9F0D] mr-1.5"></i> Vendas nos Últimos 7 Dias</h4>
+                                </div>
+                                <div class="h-[250px] sm:h-[300px] w-full relative">
+                                    <canvas id="salesChart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Comparativo Semana / Mês -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                <!-- Esta Semana -->
+                                <div class="rounded-xl border border-[#30363d] bg-[#161b22] p-4">
+                                    <h5 class="text-[10px] font-black uppercase text-gray-500 mb-2">Acumulado da Semana</h5>
+                                    <p id="dash-semana-vendas" class="text-xl font-black text-white">R$ 0,00</p>
+                                    <p id="dash-semana-pedidos" class="text-xs font-bold text-gray-400 mt-1">0 pedidos concluídos</p>
+                                </div>
+                                <!-- Este Mês -->
+                                <div class="rounded-xl border border-[#30363d] bg-[#161b22] p-4">
+                                    <h5 class="text-[10px] font-black uppercase text-gray-500 mb-2">Acumulado do Mês (Atual)</h5>
+                                    <p id="dash-mes-vendas" class="text-xl font-black text-[#FF9F0D]">R$ 0,00</p>
+                                    <p id="dash-mes-pedidos" class="text-xs font-bold text-gray-400 mt-1">0 pedidos concluídos</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Coluna 2: Detalhes e Ranking -->
+                        <div class="space-y-4 sm:space-y-6">
+                            
+                            <!-- Distribuição (Formas de Pagamento e Entrega) -->
+                            <div class="rounded-2xl border border-[#30363d] bg-[#161b22] p-4 sm:p-5">
+                                <h4 class="text-xs font-black uppercase tracking-wider text-gray-300 mb-4 border-b border-[#30363d] pb-2"><i class="fa-solid fa-chart-pie text-[#FF9F0D] mr-1.5"></i> Distribuição Mensal</h4>
+                                
+                                <div class="space-y-4">
+                                    <!-- Entregas -->
+                                    <div>
+                                        <p class="text-[10px] font-bold text-gray-500 mb-1">Tipo de Entrega</p>
+                                        <div class="flex items-center justify-between text-xs font-bold">
+                                            <span class="text-sky-400"><i class="fa-solid fa-motorcycle w-4"></i> Delivery</span>
+                                            <span id="dash-dist-delivery" class="text-white">0%</span>
+                                        </div>
+                                        <div class="w-full bg-[#0d1117] rounded-full h-1.5 mt-1.5 mb-2 overflow-hidden">
+                                            <div id="dash-bar-delivery" class="bg-sky-400 h-1.5 rounded-full" style="width: 0%"></div>
+                                        </div>
+                                        
+                                        <div class="flex items-center justify-between text-xs font-bold">
+                                            <span class="text-teal-400"><i class="fa-solid fa-bag-shopping w-4"></i> Retirada</span>
+                                            <span id="dash-dist-retirada" class="text-white">0%</span>
+                                        </div>
+                                        <div class="w-full bg-[#0d1117] rounded-full h-1.5 mt-1.5 overflow-hidden">
+                                            <div id="dash-bar-retirada" class="bg-teal-400 h-1.5 rounded-full" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Pagamentos -->
+                                    <div class="pt-2">
+                                        <p class="text-[10px] font-bold text-gray-500 mb-1">Métodos de Pagamento</p>
+                                        <div class="space-y-2.5 text-xs font-bold">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-[#00B4D8]"><i class="fa-brands fa-pix w-4 text-[13px]"></i> PIX</span>
+                                                <span id="dash-pgto-pix" class="bg-[#00B4D8]/10 text-[#00B4D8] px-2 py-0.5 rounded-md">0</span>
+                                            </div>
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-emerald-400"><i class="fa-solid fa-money-bill-wave w-4"></i> Dinheiro</span>
+                                                <span id="dash-pgto-dinheiro" class="bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md">0</span>
+                                            </div>
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-amber-400"><i class="fa-regular fa-credit-card w-4"></i> Cartão</span>
+                                                <span id="dash-pgto-cartao" class="bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-md">0</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Totais Gerais (Desde o Início) -->
+                            <div class="rounded-2xl border border-gray-700/50 bg-gradient-to-br from-[#161b22] to-[#0d1117] p-4 sm:p-5 relative overflow-hidden">
+                                <div class="absolute bottom-0 right-0 opacity-[0.03] text-8xl -mb-4 -mr-4 pointer-events-none"><i class="fa-solid fa-award"></i></div>
+                                <h4 class="text-xs font-black uppercase tracking-wider text-gray-400 mb-3"><i class="fa-solid fa-trophy text-amber-500 mr-1.5"></i> Total Geral (Histórico)</h4>
+                                <div class="space-y-3 relative z-10">
+                                    <div>
+                                        <p class="text-[10px] font-bold text-gray-500">Receita Bruta Acumulada</p>
+                                        <p id="dash-total-receita" class="text-lg font-black text-white">R$ 0,00</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-gray-500">Pedidos Concluídos</p>
+                                        <p id="dash-total-pedidos" class="text-base font-black text-white">0</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1190,11 +1368,204 @@
             }
         }
 
+        // ======================= DASHBOARD ESTATÍSTICAS =======================
+        let salesChartInstance = null;
+
+        function abrirDashboard() {
+            const modal = document.getElementById("modal-dashboard");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            carregarDashboard();
+        }
+
+        function fecharDashboard() {
+            const modal = document.getElementById("modal-dashboard");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        async function carregarDashboard() {
+            const loading = document.getElementById("dash-loading");
+            const content = document.getElementById("dash-content");
+            const btnRefresh = document.getElementById("icon-dash-refresh");
+
+            loading.classList.remove("hidden");
+            loading.classList.add("flex");
+            content.classList.add("hidden");
+            if (btnRefresh) btnRefresh.classList.add("fa-spin");
+
+            try {
+                const response = await fetch("/api/admin/dashboard", { credentials: "same-origin" });
+                if (response.status === 401) {
+                    window.location.href = "/admin/login";
+                    return;
+                }
+                const data = await response.json();
+                
+                // Preencher Hoje
+                document.getElementById("dash-hoje-vendas").textContent = formatMoney(data.hoje.total_vendas);
+                document.getElementById("dash-hoje-vendas-mobile").textContent = formatMoney(data.hoje.total_vendas);
+                document.getElementById("dash-hoje-pedidos").textContent = data.hoje.total_pedidos;
+                document.getElementById("dash-hoje-ticket").textContent = formatMoney(data.hoje.ticket_medio);
+                document.getElementById("dash-hoje-cancelados").textContent = data.cancelados_hoje;
+
+                // Preencher Períodos
+                document.getElementById("dash-semana-vendas").textContent = formatMoney(data.semana.total_vendas);
+                document.getElementById("dash-semana-pedidos").textContent = `${data.semana.total_pedidos} pedidos`;
+                document.getElementById("dash-mes-vendas").textContent = formatMoney(data.mes.total_vendas);
+                document.getElementById("dash-mes-pedidos").textContent = `${data.mes.total_pedidos} pedidos`;
+
+                // Totais
+                document.getElementById("dash-total-receita").textContent = formatMoney(data.totais.receita);
+                document.getElementById("dash-total-pedidos").textContent = data.totais.pedidos;
+                document.getElementById("dash-hora-servidor").textContent = `Atualizado às ${data.hora_servidor}`;
+
+                // Distribuição (Mês Atual)
+                const totMes = data.mes.total_pedidos || 1; // previne div/0
+                const pctDelivery = Math.round((data.mes.delivery / totMes) * 100) || 0;
+                const pctRetirada = Math.round((data.mes.retirada / totMes) * 100) || 0;
+                
+                document.getElementById("dash-dist-delivery").textContent = `${pctDelivery}%`;
+                document.getElementById("dash-bar-delivery").style.width = `${pctDelivery}%`;
+                document.getElementById("dash-dist-retirada").textContent = `${pctRetirada}%`;
+                document.getElementById("dash-bar-retirada").style.width = `${pctRetirada}%`;
+
+                document.getElementById("dash-pgto-pix").textContent = data.mes.pix;
+                document.getElementById("dash-pgto-dinheiro").textContent = data.mes.dinheiro;
+                document.getElementById("dash-pgto-cartao").textContent = data.mes.cartao;
+
+                // Gráfico
+                renderizarGraficoDash(data.vendas_por_dia);
+
+                loading.classList.remove("flex");
+                loading.classList.add("hidden");
+                content.classList.remove("hidden");
+            } catch (err) {
+                console.error("Erro ao carregar dashboard:", err);
+                loading.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-4xl text-red-500 mb-4"></i><p class="text-sm font-bold text-red-400">Erro ao carregar dados.</p>`;
+            } finally {
+                if (btnRefresh) btnRefresh.classList.remove("fa-spin");
+            }
+        }
+
+        function renderizarGraficoDash(dadosDia) {
+            const ctx = document.getElementById('salesChart');
+            if (!ctx) return;
+
+            if (salesChartInstance) {
+                salesChartInstance.destroy();
+            }
+
+            // Chart.js defaults para Dark Mode
+            Chart.defaults.color = '#8b949e';
+            Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui, sans-serif';
+
+            const labels = dadosDia.map(d => `${d.dia_semana} (${d.data})`);
+            const totais = dadosDia.map(d => d.total);
+            const peds = dadosDia.map(d => d.pedidos);
+
+            salesChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Receita (R$)',
+                            data: totais,
+                            backgroundColor: 'rgba(255, 159, 13, 0.8)',
+                            borderColor: '#FF9F0D',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Qtd Pedidos',
+                            data: peds,
+                            type: 'line',
+                            backgroundColor: '#38bdf8', /* sky-400 */
+                            borderColor: '#38bdf8',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#0d1117',
+                            pointBorderColor: '#38bdf8',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            tension: 0.3,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 8
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(22, 27, 34, 0.95)',
+                            titleColor: '#e6edf3',
+                            bodyColor: '#c9d1d9',
+                            borderColor: '#30363d',
+                            borderWidth: 1,
+                            padding: 10,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.datasetIndex === 0) {
+                                        label += 'R$ ' + context.parsed.y.toFixed(2).replace('.', ',');
+                                    } else {
+                                        label += context.parsed.y + ' un';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: '#30363d', tickColor: 'transparent' },
+                            ticks: { font: { size: 10 } }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: { color: '#30363d' },
+                            ticks: {
+                                font: { size: 10 },
+                                callback: function(value) { return 'R$ ' + value; }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: {
+                                font: { size: 10 },
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         // Fechar modais com tecla Esc
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape") {
                 fecharDetalhe();
                 fecharModalTodosPedidos();
+                fecharDashboard();
             }
         });
 
