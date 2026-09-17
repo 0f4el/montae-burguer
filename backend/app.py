@@ -186,6 +186,9 @@ import unicodedata
 
 TABELA_PRECOS_ADICIONAIS = {
     # Extras do Hambúrguer
+    "blend 120g": 10.00,
+    "blend 120g (carne extra)": 10.00,
+    "carne extra": 10.00,
     "ovo extra": 4.00,
     "bacon extra": 5.00,
     "queijo cheddar extra": 4.00,
@@ -226,10 +229,6 @@ TABELA_PRECOS_ADICIONAIS = {
     "suco caixinha 250ml goiaba": 5.00,
     "suco caixinha 250 ml (goiaba)": 5.00,
     "suco caixinha 250 ml goiaba": 5.00,
-    "h2oh! limoneto 350ml": 7.00,
-    "h2oh limoneto 350ml": 7.00,
-    "h2o limoneto 350ml": 7.00,
-    "h2o limoneto 350 ml": 7.00,
 }
 
 def normalizar_chave_adicional(texto):

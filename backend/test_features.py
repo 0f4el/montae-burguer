@@ -7,35 +7,41 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from app import app, db, restaurante_aberto, expirar_pedidos_pendentes_antigos
 from models import Pedido, STATUS_AGUARDANDO_PAGAMENTO, STATUS_EXPIRADO
 
+from models import STATUS_CANCELADO
+
+from models import Configuracao
+
 def test_schedules():
-    os.environ["IGNORAR_HORARIO_FUNCIONAMENTO"] = "false"
-    # Terça 19:00 BRT -> Fechado
-    dt_terca = datetime(2026, 9, 8, 22, 0, tzinfo=timezone.utc)
-    aberto_terca, msg = restaurante_aberto(dt_terca)
-    assert not aberto_terca, f"Terça deveria estar fechado, obtido: {aberto_terca}"
-    assert "fechado" in msg.lower()
+    with app.app_context():
+        Configuracao.set("ignorar_horario_funcionamento", "false")
+        os.environ["IGNORAR_HORARIO_FUNCIONAMENTO"] = "false"
+        # Terça 19:00 BRT -> Fechado
+        dt_terca = datetime(2026, 9, 8, 22, 0, tzinfo=timezone.utc)
+        aberto_terca, msg = restaurante_aberto(dt_terca)
+        assert not aberto_terca, f"Terça deveria estar fechado, obtido: {aberto_terca}"
+        assert "fechado" in msg.lower()
 
-    # Quarta 19:00 BRT -> Aberto
-    dt_quarta = datetime(2026, 9, 9, 22, 0, tzinfo=timezone.utc)
-    aberto_quarta, msg = restaurante_aberto(dt_quarta)
-    assert aberto_quarta, f"Quarta 19:00 deveria estar aberto, obtido: {aberto_quarta}"
+        # Quarta 19:00 BRT -> Aberto
+        dt_quarta = datetime(2026, 9, 9, 22, 0, tzinfo=timezone.utc)
+        aberto_quarta, msg = restaurante_aberto(dt_quarta)
+        assert aberto_quarta, f"Quarta 19:00 deveria estar aberto, obtido: {aberto_quarta}"
 
-    # Quarta 15:00 BRT -> Fechado
-    dt_quarta_tarde = datetime(2026, 9, 9, 18, 0, tzinfo=timezone.utc)
-    aberto_quarta_tarde, msg = restaurante_aberto(dt_quarta_tarde)
-    assert not aberto_quarta_tarde, "Quarta 15:00 deveria estar fechado"
+        # Quarta 15:00 BRT -> Fechado
+        dt_quarta_tarde = datetime(2026, 9, 9, 18, 0, tzinfo=timezone.utc)
+        aberto_quarta_tarde, msg = restaurante_aberto(dt_quarta_tarde)
+        assert not aberto_quarta_tarde, "Quarta 15:00 deveria estar fechado"
 
-    # Sexta 23:30 BRT -> Aberto (vai até 00:00)
-    dt_sex_noite = datetime(2026, 9, 12, 2, 30, tzinfo=timezone.utc)
-    aberto_sex, msg = restaurante_aberto(dt_sex_noite)
-    assert aberto_sex, "Sexta 23:30 deveria estar aberto"
+        # Sexta 23:30 BRT -> Aberto (vai até 00:00)
+        dt_sex_noite = datetime(2026, 9, 12, 2, 30, tzinfo=timezone.utc)
+        aberto_sex, msg = restaurante_aberto(dt_sex_noite)
+        assert aberto_sex, "Sexta 23:30 deveria estar aberto"
 
-    # Domingo 23:30 BRT -> Fechado (vai até 23:00)
-    dt_dom_noite = datetime(2026, 9, 14, 2, 30, tzinfo=timezone.utc)
-    aberto_dom, msg = restaurante_aberto(dt_dom_noite)
-    assert not aberto_dom, "Domingo 23:30 deveria estar fechado"
+        # Domingo 23:30 BRT -> Fechado (vai até 23:00)
+        dt_dom_noite = datetime(2026, 9, 14, 2, 30, tzinfo=timezone.utc)
+        aberto_dom, msg = restaurante_aberto(dt_dom_noite)
+        assert not aberto_dom, "Domingo 23:30 deveria estar fechado"
 
-    print("✓ Testes de horários de funcionamento passaram com sucesso!")
+        print("✓ Testes de horários de funcionamento passaram com sucesso!")
 
 def test_expiration():
     with app.app_context():
@@ -58,15 +64,24 @@ def test_expiration():
         expirados = expirar_pedidos_pendentes_antigos(minutos=60)
         db.session.refresh(p1)
         db.session.refresh(p2)
-        assert p1.status == STATUS_EXPIRADO, f"p1 deveria ser expirado mas é {p1.status}"
+        assert p1.status == STATUS_CANCELADO, f"p1 deveria ser cancelado mas é {p1.status}"
         assert p2.status == STATUS_AGUARDANDO_PAGAMENTO, f"p2 deveria ser aguardando_pagamento mas é {p2.status}"
-        print("✓ Teste de expiração de pedidos PIX antigos passou com sucesso!")
+        print("✓ Teste de cancelamento/expiração de pedidos PIX antigos passou com sucesso!")
 
         db.session.delete(p1)
         db.session.delete(p2)
         db.session.commit()
 
+def test_adicionais():
+    with app.app_context():
+        from app import calcular_preco_unitario_item, PRECO_BASE_COMBO
+        preco = calcular_preco_unitario_item("Combo Hambúrguer Artesanal", "1x Blend 120g, 2x Ovo Extra")
+        esperado = PRECO_BASE_COMBO + 10.00 + (2 * 4.00)
+        assert preco == round(esperado, 2), f"Preço incorreto: {preco} vs {esperado}"
+        print("✓ Teste de cálculo de adicionais (incluindo Blend 120g) passou com sucesso!")
+
 if __name__ == "__main__":
     test_schedules()
     test_expiration()
+    test_adicionais()
     print("TODOS OS TESTES PASSARAM COM SUCESSO!")

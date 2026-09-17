@@ -301,6 +301,20 @@
                     </h4>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+
+                        <!-- Blend 120g (Carne Extra) -->
+                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
+                            <div>
+                                <p class="font-bold text-xs text-white">Blend 120g (Carne Extra)</p>
+                                <p class="text-[10px] text-gray-400">+ R$ 10,00 un.</p>
+                            </div>
+                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
+                                <button type="button" onclick="changeExtraQty('blend-120g', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
+                                <span id="extra-qty-blend-120g" class="w-6 text-center font-bold text-xs text-white">0</span>
+                                <button type="button" onclick="changeExtraQty('blend-120g', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
+                            </div>
+                            <input type="hidden" name="adicional_qty" id="extra-input-blend-120g" data-name="Blend 120g" data-price="10.00" value="0">
+                        </div>
                         
                         <!-- Ovo Extra -->
                         <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
@@ -506,20 +520,6 @@
                                 <button type="button" onclick="changeExtraQty('mate-couro-1l', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
                             </div>
                             <input type="hidden" name="adicional_qty" id="extra-input-mate-couro-1l" data-name="Mate Couro 1L" data-price="9.00" value="0">
-                        </div>
-
-                        <!-- H2OH! Limoneto 350ml -->
-                        <div class="flex items-center justify-between p-3 bg-neutral-900 border border-neutral-800 rounded-xl">
-                            <div>
-                                <p class="font-bold text-xs text-white">H2OH! Limoneto 350ml</p>
-                                <p class="text-[10px] text-gray-400">+ R$ 7,00 un.</p>
-                            </div>
-                            <div class="flex items-center bg-black/60 border border-neutral-700 rounded-lg p-0.5">
-                                <button type="button" onclick="changeExtraQty('h2o-limoneto', -1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">-</button>
-                                <span id="extra-qty-h2o-limoneto" class="w-6 text-center font-bold text-xs text-white">0</span>
-                                <button type="button" onclick="changeExtraQty('h2o-limoneto', 1)" class="w-6 h-6 rounded bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition flex items-center justify-center text-xs cursor-pointer">+</button>
-                            </div>
-                            <input type="hidden" name="adicional_qty" id="extra-input-h2o-limoneto" data-name="H2OH! Limoneto 350ml" data-price="7.00" value="0">
                         </div>
 
                         <!-- Suco Lata 350ml (Uva) -->
