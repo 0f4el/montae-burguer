@@ -368,11 +368,11 @@
                                 <h4 class="text-xs font-black uppercase tracking-wider text-gray-300 mb-4 border-b border-[#30363d] pb-2"><i class="fa-solid fa-chart-pie text-[#FF9F0D] mr-1.5"></i> Distribuição Mensal</h4>
                                 
                                 <div class="space-y-4">
-                                    <!-- Entregas -->
+                                    <!-- Entregas e Taxas -->
                                     <div>
-                                        <p class="text-[10px] font-bold text-gray-500 mb-1">Tipo de Entrega</p>
+                                        <p class="text-[10px] font-bold text-gray-500 mb-1">Tipo de Entrega (Mês)</p>
                                         <div class="flex items-center justify-between text-xs font-bold">
-                                            <span class="text-sky-400"><i class="fa-solid fa-motorcycle w-4"></i> Delivery</span>
+                                            <span class="text-sky-400"><i class="fa-solid fa-motorcycle w-4"></i> Delivery (<span id="dash-count-delivery">0</span>)</span>
                                             <span id="dash-dist-delivery" class="text-white">0%</span>
                                         </div>
                                         <div class="w-full bg-[#0d1117] rounded-full h-1.5 mt-1.5 mb-2 overflow-hidden">
@@ -380,11 +380,28 @@
                                         </div>
                                         
                                         <div class="flex items-center justify-between text-xs font-bold">
-                                            <span class="text-teal-400"><i class="fa-solid fa-bag-shopping w-4"></i> Retirada</span>
+                                            <span class="text-teal-400"><i class="fa-solid fa-bag-shopping w-4"></i> Retirada (<span id="dash-count-retirada">0</span>)</span>
                                             <span id="dash-dist-retirada" class="text-white">0%</span>
                                         </div>
                                         <div class="w-full bg-[#0d1117] rounded-full h-1.5 mt-1.5 overflow-hidden">
                                             <div id="dash-bar-retirada" class="bg-teal-400 h-1.5 rounded-full" style="width: 0%"></div>
+                                        </div>
+
+                                        <!-- Valores Financeiros Delivery vs Retirada & Taxas de Entrega -->
+                                        <div class="mt-3.5 pt-3 border-t border-[#30363d]/60 space-y-2">
+                                            <p class="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5"><i class="fa-solid fa-receipt text-amber-400 mr-1"></i> Valores por Tipo & Frete (Mês)</p>
+                                            <div class="flex items-center justify-between text-xs">
+                                                <span class="text-gray-400 flex items-center gap-1"><i class="fa-solid fa-truck-fast text-sky-400 text-[10px]"></i> Total Taxas de Entrega:</span>
+                                                <span id="dash-mes-taxas" class="font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded text-[11px]">R$ 0,00</span>
+                                            </div>
+                                            <div class="flex items-center justify-between text-xs">
+                                                <span class="text-gray-400 flex items-center gap-1"><i class="fa-solid fa-motorcycle text-sky-400 text-[10px]"></i> Total Vendas Delivery:</span>
+                                                <span id="dash-mes-val-delivery" class="font-bold text-white text-[11px]">R$ 0,00</span>
+                                            </div>
+                                            <div class="flex items-center justify-between text-xs">
+                                                <span class="text-gray-400 flex items-center gap-1"><i class="fa-solid fa-bag-shopping text-teal-400 text-[10px]"></i> Total Vendas Retirada:</span>
+                                                <span id="dash-mes-val-retirada" class="font-bold text-white text-[11px]">R$ 0,00</span>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -417,6 +434,20 @@
                                     <div>
                                         <p class="text-[10px] font-bold text-gray-500">Receita Bruta Acumulada</p>
                                         <p id="dash-total-receita" class="text-lg font-black text-white">R$ 0,00</p>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 pt-1 border-t border-gray-700/40">
+                                        <div>
+                                            <p class="text-[9px] font-bold text-gray-500">Total Vendas Delivery</p>
+                                            <p id="dash-total-val-delivery" class="text-xs font-black text-sky-300">R$ 0,00</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-[9px] font-bold text-gray-500">Total Vendas Retirada</p>
+                                            <p id="dash-total-val-retirada" class="text-xs font-black text-teal-300">R$ 0,00</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-gray-500">Total Taxas de Entrega (Geral)</p>
+                                        <p id="dash-total-taxas" class="text-sm font-black text-amber-400">R$ 0,00</p>
                                     </div>
                                     <div>
                                         <p class="text-[10px] font-bold text-gray-500">Pedidos Concluídos</p>
@@ -1418,6 +1449,9 @@
                 // Totais
                 document.getElementById("dash-total-receita").textContent = formatMoney(data.totais.receita);
                 document.getElementById("dash-total-pedidos").textContent = data.totais.pedidos;
+                document.getElementById("dash-total-taxas").textContent = formatMoney(data.totais.taxas_entrega);
+                document.getElementById("dash-total-val-delivery").textContent = formatMoney(data.totais.valor_delivery);
+                document.getElementById("dash-total-val-retirada").textContent = formatMoney(data.totais.valor_retirada);
                 document.getElementById("dash-hora-servidor").textContent = `Atualizado às ${data.hora_servidor}`;
 
                 // Distribuição (Mês Atual)
@@ -1425,10 +1459,17 @@
                 const pctDelivery = Math.round((data.mes.delivery / totMes) * 100) || 0;
                 const pctRetirada = Math.round((data.mes.retirada / totMes) * 100) || 0;
                 
+                document.getElementById("dash-count-delivery").textContent = data.mes.delivery;
+                document.getElementById("dash-count-retirada").textContent = data.mes.retirada;
                 document.getElementById("dash-dist-delivery").textContent = `${pctDelivery}%`;
                 document.getElementById("dash-bar-delivery").style.width = `${pctDelivery}%`;
                 document.getElementById("dash-dist-retirada").textContent = `${pctRetirada}%`;
                 document.getElementById("dash-bar-retirada").style.width = `${pctRetirada}%`;
+
+                // Valores Financeiros por Tipo & Taxas de Entrega do Mês
+                document.getElementById("dash-mes-taxas").textContent = formatMoney(data.mes.total_taxas_entrega);
+                document.getElementById("dash-mes-val-delivery").textContent = formatMoney(data.mes.valor_delivery);
+                document.getElementById("dash-mes-val-retirada").textContent = formatMoney(data.mes.valor_retirada);
 
                 document.getElementById("dash-pgto-pix").textContent = data.mes.pix;
                 document.getElementById("dash-pgto-dinheiro").textContent = data.mes.dinheiro;

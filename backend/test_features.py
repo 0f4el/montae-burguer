@@ -80,8 +80,52 @@ def test_adicionais():
         assert preco == round(esperado, 2), f"Preço incorreto: {preco} vs {esperado}"
         print("✓ Teste de cálculo de adicionais (incluindo Blend 120g) passou com sucesso!")
 
+def test_dashboard():
+    with app.app_context():
+        # Cria um cliente de teste autenticado
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["admin"] = True
+            
+            # Insere pedidos de delivery e retirada para teste
+            agora = datetime.now(timezone.utc)
+            p_del = Pedido(
+                nome="Cliente Delivery", whatsapp="(31) 99999-1111", whatsapp_digits="31999991111",
+                forma_entrega="Delivery", forma_pagamento="pix", subtotal=50.0, taxa_entrega=7.0, total=57.0,
+                status="finalizado", pago=True, criado_em=agora
+            )
+            p_ret = Pedido(
+                nome="Cliente Retirada", whatsapp="(31) 99999-2222", whatsapp_digits="31999992222",
+                forma_entrega="Retirada", forma_pagamento="dinheiro", subtotal=40.0, taxa_entrega=0.0, total=40.0,
+                status="finalizado", pago=True, criado_em=agora
+            )
+            db.session.add_all([p_del, p_ret])
+            db.session.commit()
+
+            res = client.get("/api/admin/dashboard")
+            assert res.status_code == 200, f"Status code inesperado: {res.status_code}"
+            data = res.get_json()
+
+            assert "total_taxas_entrega" in data["hoje"], "total_taxas_entrega faltando em hoje"
+            assert "valor_delivery" in data["hoje"], "valor_delivery faltando em hoje"
+            assert "valor_retirada" in data["hoje"], "valor_retirada faltando em hoje"
+            assert data["hoje"]["total_taxas_entrega"] >= 7.0, f"Taxas hoje esperadas >= 7.0, obtido: {data['hoje']['total_taxas_entrega']}"
+            assert data["hoje"]["valor_delivery"] >= 57.0, f"Valor delivery hoje obtido: {data['hoje']['valor_delivery']}"
+            assert data["hoje"]["valor_retirada"] >= 40.0, f"Valor retirada hoje obtido: {data['hoje']['valor_retirada']}"
+
+            assert "taxas_entrega" in data["totais"], "taxas_entrega faltando em totais"
+            assert "valor_delivery" in data["totais"], "valor_delivery faltando em totais"
+            assert "valor_retirada" in data["totais"], "valor_retirada faltando em totais"
+
+            # Limpa
+            db.session.delete(p_del)
+            db.session.delete(p_ret)
+            db.session.commit()
+            print("✓ Teste de métricas de taxas de entrega e retirada no Dashboard passou com sucesso!")
+
 if __name__ == "__main__":
     test_schedules()
     test_expiration()
     test_adicionais()
+    test_dashboard()
     print("TODOS OS TESTES PASSARAM COM SUCESSO!")

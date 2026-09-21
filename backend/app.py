@@ -584,6 +584,9 @@ def admin_dashboard():
         total_vendas = round(sum(p.total for p in pedidos), 2)
         total_pedidos = len(pedidos)
         ticket_medio = round(total_vendas / total_pedidos, 2) if total_pedidos else 0
+        total_taxas_entrega = round(sum(float(p.taxa_entrega or 0) for p in pedidos if p.forma_entrega == "Delivery"), 2)
+        valor_delivery = round(sum(p.total for p in pedidos if p.forma_entrega == "Delivery"), 2)
+        valor_retirada = round(sum(p.total for p in pedidos if p.forma_entrega != "Delivery"), 2)
         delivery = sum(1 for p in pedidos if p.forma_entrega == "Delivery")
         retirada = total_pedidos - delivery
         pix = sum(1 for p in pedidos if "pix" in (p.forma_pagamento or "").lower())
@@ -593,6 +596,9 @@ def admin_dashboard():
             "total_vendas": total_vendas,
             "total_pedidos": total_pedidos,
             "ticket_medio": ticket_medio,
+            "total_taxas_entrega": total_taxas_entrega,
+            "valor_delivery": valor_delivery,
+            "valor_retirada": valor_retirada,
             "delivery": delivery,
             "retirada": retirada,
             "pix": pix,
@@ -633,6 +639,15 @@ def admin_dashboard():
     receita_geral = db.session.query(
         func.coalesce(func.sum(Pedido.total), 0)
     ).filter(Pedido.status.in_(status_venda)).scalar()
+    total_taxas_geral = db.session.query(
+        func.coalesce(func.sum(Pedido.taxa_entrega), 0)
+    ).filter(Pedido.status.in_(status_venda), Pedido.forma_entrega == "Delivery").scalar()
+    total_retirada_geral = db.session.query(
+        func.coalesce(func.sum(Pedido.total), 0)
+    ).filter(Pedido.status.in_(status_venda), Pedido.forma_entrega != "Delivery").scalar()
+    total_delivery_geral = db.session.query(
+        func.coalesce(func.sum(Pedido.total), 0)
+    ).filter(Pedido.status.in_(status_venda), Pedido.forma_entrega == "Delivery").scalar()
 
     # Pedidos cancelados hoje
     cancelados_hoje = Pedido.query.filter(
@@ -649,6 +664,9 @@ def admin_dashboard():
         "totais": {
             "pedidos": total_geral,
             "receita": round(float(receita_geral), 2),
+            "taxas_entrega": round(float(total_taxas_geral), 2),
+            "valor_retirada": round(float(total_retirada_geral), 2),
+            "valor_delivery": round(float(total_delivery_geral), 2),
         },
         "cancelados_hoje": cancelados_hoje,
         "hora_servidor": agora_br.strftime("%H:%M"),
