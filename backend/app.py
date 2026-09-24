@@ -1,8 +1,14 @@
 import os
 import re
+import sys
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
+
+# Garante que a pasta backend esteja no path de imports mesmo ao rodar da raiz
+BACKEND_DIR = Path(__file__).resolve().parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for
