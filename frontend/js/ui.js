@@ -101,6 +101,12 @@ function resetBuilderSelections() {
     const defaultMolho = form.querySelector('input[name="molho_gratis"][value="Baconese"]');
     if (defaultMolho) defaultMolho.checked = true;
 
+    const defaultBacon = form.querySelector('input[name="bacon_base"][value="Com Bacon"]');
+    if (defaultBacon) defaultBacon.checked = true;
+
+    const defaultOvo = form.querySelector('input[name="ovo_base"][value="Com Ovo"]');
+    if (defaultOvo) defaultOvo.checked = true;
+
     // 2. Reseta as quantidades de TODOS os adicionais extras (incluindo Queijo Extra, Cebola Extra, etc)
     const extraInputs = form.querySelectorAll('input[name="adicional_qty"]');
     extraInputs.forEach(input => {

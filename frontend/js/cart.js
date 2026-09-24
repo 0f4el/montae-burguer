@@ -76,6 +76,12 @@ function resetBuilderSelections() {
     const defaultMolho = form.querySelector('input[name="molho_gratis"][value="Baconese"]');
     if (defaultMolho) defaultMolho.checked = true;
 
+    const defaultBacon = form.querySelector('input[name="bacon_base"][value="Com Bacon"]');
+    if (defaultBacon) defaultBacon.checked = true;
+
+    const defaultOvo = form.querySelector('input[name="ovo_base"][value="Com Ovo"]');
+    if (defaultOvo) defaultOvo.checked = true;
+
     const obsInput = document.getElementById('builder-observacoes');
     if (obsInput) obsInput.value = '';
 
@@ -134,6 +140,8 @@ function submitBurgerForm() {
     const cebola = form.querySelector('input[name="cebola_base"]:checked')?.value || 'Onion Rings';
     const queijo = form.querySelector('input[name="queijo_base"]:checked')?.value || 'Mussarela';
     const molhoGratis = form.querySelector('input[name="molho_gratis"]:checked')?.value || 'Baconese';
+    const baconBase = form.querySelector('input[name="bacon_base"]:checked')?.value || 'Com Bacon';
+    const ovoBase = form.querySelector('input[name="ovo_base"]:checked')?.value || 'Com Ovo';
 
     // Coleta dos adicionais com quantidade > 0
     let adicionais = [];
@@ -163,6 +171,8 @@ function submitBurgerForm() {
         ponto: ponto,
         cebola: cebola,
         queijo: queijo,
+        baconBase: baconBase,
+        ovoBase: ovoBase,
         molhoGratis: molhoGratis,
         adicionais: adicionais.length > 0 ? adicionais.join(', ') : 'Nenhum',
         observacao: observacao
@@ -262,6 +272,8 @@ function renderCart() {
                     <span class="bg-black/60 border border-neutral-700 text-gray-200 font-bold px-2 py-0.5 rounded-md">Ponto: ${item.ponto}</span>
                     <span class="bg-black/60 border border-neutral-700 text-gray-200 font-bold px-2 py-0.5 rounded-md">Cebola: ${item.cebola}</span>
                     <span class="bg-black/60 border border-neutral-700 text-gray-200 font-bold px-2 py-0.5 rounded-md">Queijo: ${item.queijo}</span>
+                    <span class="bg-black/60 border border-neutral-700 ${item.baconBase === 'Sem Bacon' ? 'text-red-400' : 'text-gray-200'} font-bold px-2 py-0.5 rounded-md">${item.baconBase}</span>
+                    <span class="bg-black/60 border border-neutral-700 ${item.ovoBase === 'Sem Ovo' ? 'text-red-400' : 'text-gray-200'} font-bold px-2 py-0.5 rounded-md">${item.ovoBase}</span>
                     <span class="bg-black/60 border border-neutral-700 text-emerald-400 font-bold px-2 py-0.5 rounded-md">Molho: ${item.molhoGratis}</span>
                 </div>
                 ${item.adicionais !== 'Nenhum' ? `<p class="text-[10px] text-gray-400"><strong>Extras:</strong> ${item.adicionais}</p>` : ''}

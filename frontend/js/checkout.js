@@ -355,6 +355,22 @@ function limparPedidoPendente() {
 }
 
 function payloadPedido(orderDetails) {
+    const hamburgueresProcessados = cart.map(item => {
+        let obsAdicional = [];
+        if (item.baconBase === 'Sem Bacon') obsAdicional.push('Sem Bacon (Base)');
+        if (item.ovoBase === 'Sem Ovo') obsAdicional.push('Sem Ovo (Base)');
+        
+        let novaObservacao = item.observacao || '';
+        if (obsAdicional.length > 0) {
+            novaObservacao = novaObservacao ? `${obsAdicional.join(', ')} - ${novaObservacao}` : obsAdicional.join(', ');
+        }
+        
+        return {
+            ...item,
+            observacao: novaObservacao
+        };
+    });
+
     return {
         nome: orderDetails.name,
         whatsapp: orderDetails.phone,
@@ -366,7 +382,7 @@ function payloadPedido(orderDetails) {
         subtotal: orderDetails.subtotal,
         taxa_entrega: orderDetails.taxaEntrega,
         total: orderDetails.totalAmount,
-        hamburgueres: cart
+        hamburgueres: hamburgueresProcessados
     };
 }
 

@@ -110,16 +110,15 @@ def restaurante_aberto(dt=None):
 
 def expirar_pedidos_pendentes_antigos(minutos=60):
     """
-    Marca como 'cancelado' pedidos com status 'aguardando_pagamento' ou 'expirado'
+    Marca como 'expirado' pedidos com status 'aguardando_pagamento'
     que foram criados há mais de `minutos` minutos (padrão: 60).
-    Pedidos expirados também são movidos para cancelado.
     """
     expirados = []
     try:
         limite = agora_utc() - timedelta(minutes=minutos)
         pedidos_pendentes = (
             Pedido.query.filter(
-                Pedido.status.in_([STATUS_AGUARDANDO_PAGAMENTO, STATUS_EXPIRADO]),
+                Pedido.status == STATUS_AGUARDANDO_PAGAMENTO,
                 Pedido.pago == False,  # noqa: E712
             )
             .all()
@@ -132,7 +131,7 @@ def expirar_pedidos_pendentes_antigos(minutos=60):
             if criado.tzinfo is None:
                 criado = criado.replace(tzinfo=timezone.utc)
             if criado <= limite:
-                pedido.status = STATUS_CANCELADO
+                pedido.status = STATUS_EXPIRADO
                 pedido.atualizado_em = agora_utc()
                 expirados.append(pedido)
 
