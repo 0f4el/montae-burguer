@@ -570,19 +570,20 @@
             const label = document.getElementById("label-horario");
             if (!botao || !icone || !label) return;
 
-            const horarioDesativado = Boolean(config?.ignorar_horario_funcionamento);
-            botao.dataset.ignorarHorario = String(horarioDesativado);
+            // Ativo = Aberto para pedidos / Desativado = Fechado para pedidos
+            const horarioAtivo = Boolean(config?.ativo ?? config?.aberto ?? config?.ignorar_horario_funcionamento ?? (config?.ignorar_horario_funcionamento !== false));
+            botao.dataset.horarioAtivo = String(horarioAtivo);
 
-            if (horarioDesativado) {
-                botao.className = "rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-bold text-emerald-400 transition flex items-center gap-1.5 shadow-sm active:scale-95";
-                botao.title = "Horário desativado: a loja aceita pedidos a qualquer momento. Clique para reativar o horário.";
+            if (horarioAtivo) {
+                botao.className = "rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition flex items-center gap-1.5 shadow-sm active:scale-95";
+                botao.title = "Horário de funcionamento ATIVADO: A loja está aceitando novos pedidos. Clique para desativar e fechar.";
                 icone.className = "fa-solid fa-store";
-                label.textContent = "Horário desativado";
-            } else {
-                botao.className = "rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-bold text-amber-400 transition flex items-center gap-1.5 shadow-sm active:scale-95";
-                botao.title = "Horário ativado: a loja segue o horário configurado. Clique para liberar pedidos 24h.";
-                icone.className = "fa-solid fa-clock";
                 label.textContent = "Horário ativado";
+            } else {
+                botao.className = "rounded-lg border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-bold text-red-400 hover:bg-red-500/20 transition flex items-center gap-1.5 shadow-sm active:scale-95";
+                botao.title = "Horário de funcionamento DESATIVADO: A loja está fechada para novos pedidos. Clique para ativar e abrir.";
+                icone.className = "fa-solid fa-lock";
+                label.textContent = "Horário desativado";
             }
         }
 
@@ -609,8 +610,8 @@
             const botao = document.getElementById("btn-toggle-horario");
             if (!botao || botao.disabled) return;
 
-            const horarioDesativadoAtual = botao.dataset.ignorarHorario === "true";
-            const proximoEstado = !horarioDesativadoAtual;
+            const horarioAtivoAtual = botao.dataset.horarioAtivo !== "false";
+            const proximoEstado = !horarioAtivoAtual;
             botao.disabled = true;
 
             try {
@@ -618,7 +619,7 @@
                     method: "POST",
                     credentials: "same-origin",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ignorar: proximoEstado })
+                    body: JSON.stringify({ ativo: proximoEstado, ignorar: proximoEstado })
                 });
                 const data = await response.json().catch(() => ({}));
 

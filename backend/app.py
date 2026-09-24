@@ -60,48 +60,27 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "montaeadmin")
 
 def restaurante_aberto(dt=None):
     """
-    Verifica se o restaurante está aberto com base no fuso horário de Brasília (UTC-3):
-    Segunda: 18:30 às 23:00
-    Terça-feira: Fechado
-    Quarta: 18:30 às 23:00
-    Quinta: 18:30 às 23:00
-    Sexta: 18:30 às 00:00 (23:59:59)
-    Sábado: 18:30 às 00:00 (23:59:59)
-    Domingo: 18:30 às 23:00
-    
-    Pode ser desativado pelo admin através do painel.
+    Verifica se o restaurante está aberto para pedidos.
+    Controlado diretamente pelo painel administrativo (Horário de Funcionamento Ativado / Desativado):
+    - Ativado (padrão): Clientes podem fazer pedidos normalmente.
+    - Desativado: Restaurante fechado para novos pedidos, exibe mensagem explicativa.
     """
-    # Verifica se a validação de horário está desativada (configuração do banco tem prioridade)
-    ignorar = Configuracao.get("ignorar_horario_funcionamento", "false").lower()
-    if ignorar in ("true", "1", "yes"):
-        return True, ""
-    
-    # Fallback para variável de ambiente (compatibilidade)
-    if os.getenv("IGNORAR_HORARIO_FUNCIONAMENTO", "false").lower() in ("true", "1", "yes"):
-        return True, ""
-
-    now_utc = dt or agora_utc()
-    fuso_br = timezone(timedelta(hours=-3))
-    agora_br = now_utc.astimezone(fuso_br)
-    dia_semana = agora_br.weekday()  # Python: 0=Seg, 1=Ter, 2=Qua, 3=Qui, 4=Sex, 5=Sáb, 6=Dom
-    minutos = agora_br.hour * 60 + agora_br.minute
-
-    # 0=Seg, 2=Qua, 3=Qui, 6=Dom: 18:30 (1110) até 23:00 (1380)
-    # 4=Sex, 5=Sáb: 18:30 (1110) até 24:00 (1440)
-    # 1=Terça: Fechado
-    aberto = False
-    if dia_semana in (0, 2, 3, 6):
-        aberto = (1110 <= minutos <= 1380)
-    elif dia_semana in (4, 5):
-        aberto = (1110 <= minutos <= 1440)
+    config_ativo = Configuracao.get("horario_funcionamento_ativo", None)
+    if config_ativo is not None:
+        ativo = config_ativo.lower() in ("true", "1", "yes")
     else:
-        aberto = False
+        # Compatibilidade com configuração legada
+        ignorar = Configuracao.get("ignorar_horario_funcionamento", None)
+        if ignorar is not None:
+            ativo = ignorar.lower() in ("true", "1", "yes")
+        else:
+            ativo = True  # Padrão: Aberto / Ativado
 
-    if not aberto:
+    if not ativo:
         mensagem = (
-            "O restaurante está fechado no momento. "
-            "Horário de atendimento: Seg, Qua, Qui e Dom das 18:30 às 23:00 | "
-            "Sex e Sáb das 18:30 às 00:00 | Terça-feira: Fechado."
+            "O restaurante está fechado para pedidos no momento. "
+            "Nosso horário de funcionamento está temporariamente desativado para novos pedidos. "
+            "Por favor, volte mais tarde ou entre em contato pelo nosso WhatsApp!"
         )
         return False, mensagem
 
@@ -356,10 +335,13 @@ def health():
 @app.get("/api/status-loja")
 def status_loja():
     aberto, msg = restaurante_aberto()
-    return jsonify({
+    resp = jsonify({
         "aberto": aberto,
+        "ativo": aberto,
         "mensagem": msg if not aberto else "Restaurante aberto para pedidos.",
     })
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
 
 
 @app.post("/api/pedidos")
@@ -674,27 +656,44 @@ def admin_dashboard():
 @app.get("/api/admin/configuracoes/horario-funcionamento")
 @login_admin_obrigatorio
 def obter_config_horario():
-    """Retorna o estado atual da validação de horário de funcionamento"""
-    ignorar = Configuracao.get("ignorar_horario_funcionamento", "false")
+    """Retorna o estado atual do horário de funcionamento (ativo = aberto, desativado = fechado)"""
+    aberto, msg = restaurante_aberto()
     return jsonify({
-        "ignorar_horario_funcionamento": ignorar.lower() in ("true", "1", "yes"),
-        "aberto_agora": restaurante_aberto()[0]
+        "ativo": aberto,
+        "aberto": aberto,
+        "ignorar_horario_funcionamento": aberto,
+        "mensagem": msg
     })
 
 @app.post("/api/admin/configuracoes/horario-funcionamento")
 @login_admin_obrigatorio
 def atualizar_config_horario():
-    """Ativa ou desativa a validação de horário de funcionamento"""
+    """Ativa ou desativa o recebimento de pedidos no restaurante"""
     data = request.get_json(silent=True) or {}
-    ignorar = data.get("ignorar", False)
-    
-    Configuracao.set("ignorar_horario_funcionamento", "true" if ignorar else "false")
-    
+    if "ativo" in data:
+        ativo = bool(data.get("ativo"))
+    elif "ignorar" in data:
+        ativo = bool(data.get("ignorar"))
+    elif "aberto" in data:
+        ativo = bool(data.get("aberto"))
+    else:
+        ativo = True
+
+    Configuracao.set("horario_funcionamento_ativo", "true" if ativo else "false")
+    Configuracao.set("ignorar_horario_funcionamento", "true" if ativo else "false")
+
+    mensagem = (
+        "Horário de funcionamento ativado. Restaurante aberto para receber pedidos!"
+        if ativo
+        else "Horário de funcionamento desativado. Restaurante fechado para novos pedidos."
+    )
+
     return jsonify({
         "success": True,
-        "ignorar_horario_funcionamento": ignorar,
-        "mensagem": "Horário de funcionamento desativado. Loja aceita pedidos 24/7." if ignorar 
-                   else "Horário de funcionamento ativado. Loja só aceita pedidos no horário configurado."
+        "ativo": ativo,
+        "aberto": ativo,
+        "ignorar_horario_funcionamento": ativo,
+        "mensagem": mensagem
     })
 
 @app.patch("/api/admin/pedidos/<int:pedido_id>/status")

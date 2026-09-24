@@ -62,7 +62,13 @@
             <div class="flex items-center gap-3">
                 <img src="images/logo.jpeg" alt="Montaê Burguer Logo" class="w-10 h-10 rounded-full object-cover border border-[#FF9F0D] shadow-sm">
                 <div>
-                    <h1 class="text-xl font-black tracking-wider text-[#FF9F0D]">MONTAÊ BURGUER</h1>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-xl font-black tracking-wider text-[#FF9F0D]">MONTAÊ BURGUER</h1>
+                        <span id="status-restaurante-badge" onclick="abrirModalHorarios()" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 text-[10px] font-black tracking-wide cursor-pointer hover:bg-emerald-500/30 transition shadow-sm" title="Status do Restaurante">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>Aberto</span>
+                        </span>
+                    </div>
                     <p class="text-[9px] text-gray-400 uppercase tracking-widest">Feito Entre Amigos</p>
                 </div>
             </div>
@@ -77,6 +83,12 @@
                 </div>
                 <span class="text-xs font-bold uppercase tracking-wider text-gray-300 group-hover:text-white">Meu Pedido</span>
             </button>
+        </div>
+        <!-- Banner de Restaurante Fechado -->
+        <div id="banner-restaurante-fechado" class="hidden bg-red-950/90 border-t border-b border-red-800/80 px-4 py-2 text-center text-xs font-semibold text-red-200 flex items-center justify-center gap-2 cursor-pointer" onclick="abrirModalHorarios()">
+            <i class="fa-solid fa-circle-exclamation text-red-400"></i>
+            <span id="banner-fechado-texto">Restaurante Fechado para pedidos no momento.</span>
+            <span class="text-[10px] bg-red-800 text-white px-2 py-0.5 rounded-full font-bold ml-1 hover:bg-red-700">Ver detalhes</span>
         </div>
     </header>
     
@@ -1074,7 +1086,23 @@
     <!-- API -->
      <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAS_3bXiY07Ql2nSAMGa6gpzUsrImBrAEE&libraries=places" async defer></script>
 
+    <!-- Modal de Informação de Horários / Loja Fechada -->
+    <div id="modal-horarios-backdrop" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-[#1E1E1E] border border-neutral-800 w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl space-y-4">
+            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-neutral-800 text-[#FF9F0D]">
+                <i class="fa-solid fa-store text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-black text-white">Status do Restaurante</h3>
+            <div id="modal-horarios-status"></div>
+            <p id="modal-horarios-msg" class="text-xs text-gray-400 leading-relaxed"></p>
+            <button type="button" onclick="fecharModalHorarios()" class="w-full rounded-xl bg-[#FF9F0D] hover:bg-[#E08800] py-2.5 text-xs font-black uppercase text-black cursor-pointer transition">
+                Entendido
+            </button>
+        </div>
+    </div>
+
     <!-- SCRIPTS JS MODULARIZADOS -->
+    <script src="js/schedule.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/cart.js"></script>
     <script src="js/payment.js"></script>
