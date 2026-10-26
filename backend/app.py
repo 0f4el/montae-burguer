@@ -670,6 +670,165 @@ def admin_dashboard():
         "hora_servidor": agora_br.strftime("%H:%M"),
     })
 
+@app.get("/api/admin/dashboard/dia")
+@login_admin_obrigatorio
+def admin_dashboard_dia():
+    """Retorna estatísticas de vendas de um dia específico (YYYY-MM-DD)"""
+    data_param = request.args.get("data", "").strip()
+    if not data_param:
+        return erro("Informe a data no formato YYYY-MM-DD.")
+
+    try:
+        data_dt = datetime.strptime(data_param, "%Y-%m-%d")
+    except ValueError:
+        return erro("Data inválida. Use o formato YYYY-MM-DD.")
+
+    fuso_br = timezone(timedelta(hours=-3))
+    inicio_dia = data_dt.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=fuso_br)
+    fim_dia = inicio_dia + timedelta(days=1)
+    inicio_dia_utc = inicio_dia.astimezone(timezone.utc)
+    fim_dia_utc = fim_dia.astimezone(timezone.utc)
+
+    status_venda = [
+        STATUS_AGUARDANDO_APROVACAO, "em_preparacao",
+        "pronto_para_retirada", "saiu_para_entrega", "finalizado",
+    ]
+
+    pedidos = (
+        Pedido.query.filter(
+            Pedido.criado_em >= inicio_dia_utc,
+            Pedido.criado_em < fim_dia_utc,
+            Pedido.status.in_(status_venda),
+        )
+        .order_by(Pedido.criado_em.desc())
+        .all()
+    )
+
+    total_vendas = round(sum(p.total for p in pedidos), 2)
+    total_pedidos = len(pedidos)
+    ticket_medio = round(total_vendas / total_pedidos, 2) if total_pedidos else 0
+    total_taxas = round(sum(float(p.taxa_entrega or 0) for p in pedidos if p.forma_entrega == "Delivery"), 2)
+    valor_delivery = round(sum(p.total for p in pedidos if p.forma_entrega == "Delivery"), 2)
+    valor_retirada = round(sum(p.total for p in pedidos if p.forma_entrega != "Delivery"), 2)
+    delivery = sum(1 for p in pedidos if p.forma_entrega == "Delivery")
+    retirada = total_pedidos - delivery
+    pix = sum(1 for p in pedidos if "pix" in (p.forma_pagamento or "").lower())
+    dinheiro = sum(1 for p in pedidos if p.forma_pagamento == "dinheiro")
+    cartao = sum(1 for p in pedidos if "cartao" in (p.forma_pagamento or "").lower())
+
+    cancelados = Pedido.query.filter(
+        Pedido.criado_em >= inicio_dia_utc,
+        Pedido.criado_em < fim_dia_utc,
+        Pedido.status.in_([STATUS_CANCELADO, STATUS_EXPIRADO]),
+    ).count()
+
+    nomes_dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
+    dia_semana = nomes_dias[data_dt.weekday()]
+
+    return jsonify({
+        "data": data_param,
+        "data_formatada": data_dt.strftime("%d/%m/%Y"),
+        "dia_semana": dia_semana,
+        "total_vendas": total_vendas,
+        "total_pedidos": total_pedidos,
+        "ticket_medio": ticket_medio,
+        "total_taxas_entrega": total_taxas,
+        "valor_delivery": valor_delivery,
+        "valor_retirada": valor_retirada,
+        "delivery": delivery,
+        "retirada": retirada,
+        "pix": pix,
+        "dinheiro": dinheiro,
+        "cartao": cartao,
+        "cancelados": cancelados,
+        "pedidos": [p.to_dict() for p in pedidos],
+    })
+
+@app.get("/api/admin/dashboard/mes")
+@login_admin_obrigatorio
+def admin_dashboard_mes():
+    """Retorna estatísticas diárias de um mês completo para o calendário"""
+    try:
+        ano = int(request.args.get("ano", 0))
+        mes = int(request.args.get("mes", 0))
+        if not (1 <= mes <= 12 and ano >= 2000):
+            raise ValueError()
+    except (ValueError, TypeError):
+        return erro("Informe ano e mês válidos (ex: ano=2026&mes=10).")
+
+    fuso_br = timezone(timedelta(hours=-3))
+
+    # Calcular último dia do mês sem importar calendar
+    if mes == 12:
+        primeiro_proximo = datetime(ano + 1, 1, 1)
+    else:
+        primeiro_proximo = datetime(ano, mes + 1, 1)
+    ultimo_dia = (primeiro_proximo - timedelta(days=1)).day
+
+    status_venda = [
+        STATUS_AGUARDANDO_APROVACAO, "em_preparacao",
+        "pronto_para_retirada", "saiu_para_entrega", "finalizado",
+    ]
+
+    # Buscar todos os pedidos do mês em uma única query
+    inicio_mes = datetime(ano, mes, 1, 0, 0, 0, tzinfo=fuso_br).astimezone(timezone.utc)
+    fim_mes = primeiro_proximo.replace(tzinfo=fuso_br).astimezone(timezone.utc)
+
+    pedidos_mes = Pedido.query.filter(
+        Pedido.criado_em >= inicio_mes,
+        Pedido.criado_em < fim_mes,
+    ).all()
+
+    # Indexar pedidos por dia (BR)
+    from collections import defaultdict
+    pedidos_por_dia = defaultdict(list)
+    cancelados_por_dia = defaultdict(int)
+    for p in pedidos_mes:
+        criado_br = p.criado_em.replace(tzinfo=timezone.utc).astimezone(fuso_br) if p.criado_em.tzinfo is None else p.criado_em.astimezone(fuso_br)
+        dia_num = criado_br.day
+        if p.status in [STATUS_CANCELADO, STATUS_EXPIRADO]:
+            cancelados_por_dia[dia_num] += 1
+        elif p.status in status_venda:
+            pedidos_por_dia[dia_num].append(p)
+
+    dias = []
+    max_vendas = 0.0
+    for dia_num in range(1, ultimo_dia + 1):
+        pedidos_dia = pedidos_por_dia[dia_num]
+        total_vendas = round(sum(p.total for p in pedidos_dia), 2)
+        total_pedidos = len(pedidos_dia)
+        ticket_medio = round(total_vendas / total_pedidos, 2) if total_pedidos else 0
+        delivery = sum(1 for p in pedidos_dia if p.forma_entrega == "Delivery")
+        if total_vendas > max_vendas:
+            max_vendas = total_vendas
+
+        data_dt = datetime(ano, mes, dia_num)
+        nomes_dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
+        dias.append({
+            "dia": dia_num,
+            "data": f"{ano:04d}-{mes:02d}-{dia_num:02d}",
+            "data_formatada": data_dt.strftime("%d/%m/%Y"),
+            "dia_semana": nomes_dias[data_dt.weekday()],
+            "total_vendas": total_vendas,
+            "total_pedidos": total_pedidos,
+            "ticket_medio": ticket_medio,
+            "delivery": delivery,
+            "retirada": total_pedidos - delivery,
+            "cancelados": cancelados_por_dia[dia_num],
+        })
+
+    nomes_meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+
+    return jsonify({
+        "ano": ano,
+        "mes": mes,
+        "nome_mes": nomes_meses[mes - 1],
+        "total_dias": ultimo_dia,
+        "dias": dias,
+        "max_vendas": round(max_vendas, 2),
+    })
+
 @app.get("/api/admin/configuracoes/horario-funcionamento")
 @login_admin_obrigatorio
 def obter_config_horario():
