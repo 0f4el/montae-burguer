@@ -385,6 +385,17 @@
                             <div id="cal-grid" class="grid grid-cols-7 gap-1"></div>
                         </div>
 
+                        <!-- Barra de seleção multi-dia -->
+                        <div id="cal-selecao-barra" class="hidden flex items-center justify-between gap-2 px-4 py-2 bg-indigo-500/10 border-t border-indigo-500/30">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-calendar-check text-indigo-400 text-sm"></i>
+                                <span id="cal-selecao-count" class="text-xs font-black text-indigo-300">0 dias selecionados</span>
+                            </div>
+                            <button onclick="limparSelecaoDias()" class="rounded-lg border border-indigo-500/30 bg-[#0d1117] px-2.5 py-1 text-[11px] font-bold text-indigo-300 hover:border-red-400 hover:text-red-400 transition active:scale-95 flex items-center gap-1">
+                                <i class="fa-solid fa-xmark"></i> Limpar seleção
+                            </button>
+                        </div>
+
                         <!-- Detalhe do dia selecionado (expande abaixo do calendário) -->
                         <div id="dash-dia-detail" class="hidden border-t border-indigo-500/20">
                             <!-- Header do detalhe -->
@@ -1694,7 +1705,7 @@
         let calAnoAtual = new Date().getFullYear();
         let calMesAtual = new Date().getMonth() + 1; // 1-12
         let calDadosMes = null;
-        let calDiaSelecionado = null;
+        let calDiasSelecionados = new Set();
 
         function navegarMes(delta) {
             calMesAtual += delta;
@@ -1751,7 +1762,7 @@
             for (const dia of dados.dias) {
                 const intensidade = maxVendas > 0 ? dia.total_vendas / maxVendas : 0;
                 const isHoje = dia.data === hojeStr;
-                const isSel = dia.data === calDiaSelecionado;
+            const isSel = calDiasSelecionados.has(dia.data);
                 const temVendas = dia.total_pedidos > 0;
 
                 let bgClass, textVal, borderClass;
@@ -1773,7 +1784,10 @@
                     borderClass = isSel ? "border-indigo-300" : isHoje ? "border-indigo-400/60" : "border-indigo-500/20";
                 }
 
-                const ringClass = isSel ? "ring-2 ring-white/20 ring-inset" : "";
+                if (isSel) {
+                    borderClass = "border-2 border-[#FF9F0D]";
+                }
+                const ringClass = isSel ? "ring-2 ring-[#FF9F0D]/70 ring-inset shadow-[0_0_10px_rgba(255,159,13,0.35)]" : "";
                 const diaNumClass = isHoje ? "text-indigo-400" : temVendas ? textVal : "text-gray-600";
                 const receitaMini = temVendas
                     ? `<span class="text-[9px] font-bold truncate">${formatMoney(dia.total_vendas).replace('R$ ','')}</span>`
@@ -1822,7 +1836,7 @@
                         <div class="flex justify-between gap-6"><span class="text-gray-400">Retirada</span><span class="font-bold text-white">${dia.retirada}</span></div>
                         ${dia.cancelados > 0 ? `<div class="flex justify-between gap-6"><span class="text-gray-400">Cancelados</span><span class="font-bold text-rose-400">${dia.cancelados}</span></div>` : ''}
                     </div>
-                    <p class="text-[10px] text-indigo-400 font-bold mt-2 pt-1.5 border-t border-[#30363d]"><i class="fa-solid fa-hand-pointer mr-1"></i>Clique para ver detalhes</p>`
+                    <p class="text-[10px] text-indigo-400 font-bold mt-2 pt-1.5 border-t border-[#30363d]"><i class="fa-solid fa-hand-pointer mr-1"></i>Clique para selecionar · Segure para multi-seleção</p>`
                 }
             `;
             posicionarTooltipCal(event);
@@ -1846,8 +1860,29 @@
             if (tt) tt.classList.add("hidden");
         }
 
+        function atualizarBarraSelecao() {
+            const barra = document.getElementById("cal-selecao-barra");
+            if (!barra) return;
+            if (calDiasSelecionados.size === 0) {
+                barra.classList.add("hidden");
+            } else {
+                barra.classList.remove("hidden");
+                const countEl = document.getElementById("cal-selecao-count");
+                if (countEl) countEl.textContent = `${calDiasSelecionados.size} dia${calDiasSelecionados.size > 1 ? 's' : ''} selecionado${calDiasSelecionados.size > 1 ? 's' : ''}`;
+            }
+        }
+
+        function limparSelecaoDias() {
+            calDiasSelecionados.clear();
+            atualizarBarraSelecao();
+            document.getElementById("dash-dia-detail")?.classList.add("hidden");
+            document.getElementById("dash-dia-result")?.classList.add("hidden");
+            if (calDadosMes) renderizarCalendario(calDadosMes);
+        }
+
         function fecharDetalheDia() {
-            calDiaSelecionado = null;
+            calDiasSelecionados.clear();
+            atualizarBarraSelecao();
             document.getElementById("dash-dia-detail")?.classList.add("hidden");
             document.getElementById("dash-dia-result")?.classList.add("hidden");
             if (calDadosMes) renderizarCalendario(calDadosMes);
@@ -1856,15 +1891,28 @@
         async function selecionarDiaCalendario(data) {
             ocultarTooltipCal();
 
-            // Toggle: clicar no mesmo dia fecha o painel
-            if (calDiaSelecionado === data) {
-                fecharDetalheDia();
+            // Toggle: se já está selecionado, remove
+            if (calDiasSelecionados.has(data)) {
+                calDiasSelecionados.delete(data);
+            } else {
+                calDiasSelecionados.add(data);
+            }
+
+            atualizarBarraSelecao();
+            if (calDadosMes) renderizarCalendario(calDadosMes);
+
+            // Se nenhum dia selecionado, fechar painel
+            if (calDiasSelecionados.size === 0) {
+                document.getElementById("dash-dia-detail")?.classList.add("hidden");
+                document.getElementById("dash-dia-result")?.classList.add("hidden");
                 return;
             }
 
-            calDiaSelecionado = data;
-            if (calDadosMes) renderizarCalendario(calDadosMes); // atualiza estilo selecionado
+            // Carregar dados de todos os dias selecionados
+            await carregarDetalhesDiasSelecionados();
+        }
 
+        async function carregarDetalhesDiasSelecionados() {
             const detalhe = document.getElementById("dash-dia-detail");
             const loadingEl = document.getElementById("dash-dia-loading");
             const result = document.getElementById("dash-dia-result");
@@ -1872,31 +1920,264 @@
 
             if (detalhe) detalhe.classList.remove("hidden");
             if (result) result.classList.add("hidden");
+
+            const numDias = calDiasSelecionados.size;
+            const labelDias = numDias === 1 ? "1 dia" : `${numDias} dias`;
+
             if (loadingEl) {
-                loadingEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-xl text-indigo-400 mb-2"></i><p class="text-xs font-bold text-gray-400">Carregando detalhes...</p>`;
+                loadingEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-xl text-indigo-400 mb-2"></i><p class="text-xs font-bold text-gray-400">Carregando detalhes de ${labelDias}...</p>`;
                 loadingEl.classList.remove("hidden");
                 loadingEl.classList.add("flex");
             }
 
-            // Scroll suave até o painel de detalhes
             setTimeout(() => detalhe?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
 
             try {
-                const response = await fetch(`/api/admin/dashboard/dia?data=${data}`, { credentials: "same-origin" });
-                if (response.status === 401) { window.location.href = "/admin/login"; return; }
-                if (!response.ok) {
-                    const errData = await response.json().catch(() => ({}));
-                    throw new Error(errData.detail || "Erro ao consultar dados do dia.");
+                const datasOrdenadas = Array.from(calDiasSelecionados).sort();
+                const promises = datasOrdenadas.map(data =>
+                    fetch(`/api/admin/dashboard/dia?data=${data}`, { credentials: "same-origin" })
+                        .then(r => {
+                            if (r.status === 401) { window.location.href = "/admin/login"; throw new Error("Não autorizado"); }
+                            if (!r.ok) throw new Error("Erro ao consultar dados.");
+                            return r.json();
+                        })
+                );
+
+                const resultados = await Promise.all(promises);
+
+                // Cache dos pedidos
+                resultados.forEach(d => {
+                    if (d.pedidos) d.pedidos.forEach(p => { pedidosCache[p.id] = p; });
+                });
+
+                if (numDias === 1) {
+                    const d = resultados[0];
+                    if (titulo) titulo.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${escapeHtml(d.dia_semana)}, ${escapeHtml(d.data_formatada)}`;
+                    renderizarVendasDia(d);
+                } else {
+                    // Agregar dados de múltiplos dias
+                    const agregado = {
+                        total_vendas: 0,
+                        total_pedidos: 0,
+                        ticket_medio: 0,
+                        total_taxas_entrega: 0,
+                        valor_delivery: 0,
+                        valor_retirada: 0,
+                        delivery: 0,
+                        retirada: 0,
+                        pix: 0,
+                        dinheiro: 0,
+                        cartao: 0,
+                        cancelados: 0,
+                        pedidos: [],
+                        dias_info: []
+                    };
+
+                    resultados.forEach(d => {
+                        agregado.total_vendas += d.total_vendas || 0;
+                        agregado.total_pedidos += d.total_pedidos || 0;
+                        agregado.total_taxas_entrega += (d.total_taxas_entrega || 0);
+                        agregado.valor_delivery += (d.valor_delivery || 0);
+                        agregado.valor_retirada += (d.valor_retirada || 0);
+                        agregado.delivery += (d.delivery || 0);
+                        agregado.retirada += (d.retirada || 0);
+                        agregado.pix += (d.pix || 0);
+                        agregado.dinheiro += (d.dinheiro || 0);
+                        agregado.cartao += (d.cartao || 0);
+                        agregado.cancelados += (d.cancelados || 0);
+                        if (d.pedidos) agregado.pedidos.push(...d.pedidos);
+                        agregado.dias_info.push({ dia_semana: d.dia_semana, data_formatada: d.data_formatada, data: d.data });
+                    });
+
+                    agregado.total_vendas = Math.round(agregado.total_vendas * 100) / 100;
+                    agregado.total_taxas_entrega = Math.round(agregado.total_taxas_entrega * 100) / 100;
+                    agregado.valor_delivery = Math.round(agregado.valor_delivery * 100) / 100;
+                    agregado.valor_retirada = Math.round(agregado.valor_retirada * 100) / 100;
+                    agregado.ticket_medio = agregado.total_pedidos > 0
+                        ? Math.round((agregado.total_vendas / agregado.total_pedidos) * 100) / 100
+                        : 0;
+
+                    const primeira = agregado.dias_info[0].data_formatada;
+                    const ultima = agregado.dias_info[agregado.dias_info.length - 1].data_formatada;
+                    const tituloTexto = numDias === 2
+                        ? `${primeira} e ${ultima}`
+                        : `${primeira} → ${ultima} (${numDias} dias)`;
+
+                    if (titulo) titulo.innerHTML = `<i class="fa-solid fa-calendar-week"></i> ${escapeHtml(tituloTexto)}`;
+                    renderizarVendasMultiDias(agregado);
                 }
-                const d = await response.json();
-                if (d.pedidos) d.pedidos.forEach(p => { pedidosCache[p.id] = p; });
-                if (titulo) titulo.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${escapeHtml(d.dia_semana)}, ${escapeHtml(d.data_formatada)}`;
-                renderizarVendasDia(d);
+
                 if (loadingEl) { loadingEl.classList.add("hidden"); loadingEl.classList.remove("flex"); }
                 if (result) result.classList.remove("hidden");
             } catch (err) {
                 if (loadingEl) loadingEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-xl text-red-400 mb-2"></i><p class="text-xs font-bold text-red-400">${escapeHtml(err.message)}</p>`;
             }
+        }
+
+        function renderizarVendasMultiDias(d) {
+            const result = document.getElementById("dash-dia-result");
+            const totPedidos = d.total_pedidos || 0;
+            const pctDelivery = totPedidos > 0 ? Math.round((d.delivery / totPedidos) * 100) : 0;
+            const pctRetirada = totPedidos > 0 ? Math.round((d.retirada / totPedidos) * 100) : 0;
+            const numDias = d.dias_info.length;
+
+            const diasBadgesHTML = d.dias_info.map(di =>
+                `<span class="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-bold text-indigo-300">${escapeHtml(di.data_formatada)}</span>`
+            ).join(" ");
+
+            const pedidosRowsHTML = d.pedidos && d.pedidos.length > 0
+                ? d.pedidos.map(p => `
+                    <tr class="hover:bg-[#0d1117]/60 transition">
+                        <td class="px-3 py-2 font-bold text-[#FF9F0D]">#${escapeHtml(p.id)}</td>
+                        <td class="px-3 py-2 text-[11px] text-gray-400 whitespace-nowrap">${formatDate(p.criado_em)}</td>
+                        <td class="px-3 py-2 font-bold text-white">${escapeHtml(p.nome)}</td>
+                        <td class="px-3 py-2 whitespace-nowrap"><span class="rounded bg-[#0d1117] px-2 py-0.5 text-[10px] font-bold text-gray-300 border border-[#30363d]">${escapeHtml(p.forma_entrega)}</span></td>
+                        <td class="px-3 py-2 text-[11px] text-gray-300 max-w-[100px] truncate">${escapeHtml(p.forma_pagamento)}</td>
+                        <td class="px-3 py-2 font-black text-[#FF9F0D] whitespace-nowrap">${formatMoney(p.total)}</td>
+                        <td class="px-3 py-2 whitespace-nowrap">${getStatusBadge(p.status)}</td>
+                        <td class="px-3 py-2 text-center">
+                            <button onclick="abrirDetalhe(${p.id})" class="rounded-lg border border-[#30363d] bg-[#0d1117] px-2.5 py-1 text-[11px] font-bold text-gray-300 hover:border-[#FF9F0D] hover:text-[#FF9F0D] transition active:scale-95">
+                                <i class="fa-solid fa-eye mr-1"></i>Ver
+                            </button>
+                        </td>
+                    </tr>
+                `).join("")
+                : `<tr><td colspan="8" class="px-3 py-8 text-center text-gray-500 text-xs">Nenhum pedido encontrado nos dias selecionados.</td></tr>`;
+
+            const pedidosCardsHTML = d.pedidos && d.pedidos.length > 0
+                ? d.pedidos.map(p => `
+                    <div class="rounded-xl border border-[#30363d] bg-[#0d1117] p-3 space-y-2">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-[11px] font-black text-[#FF9F0D]">#${escapeHtml(p.id)}</span>
+                                <h5 class="text-sm font-black text-white leading-tight">${escapeHtml(p.nome)}</h5>
+                            </div>
+                            <span class="text-xs font-black text-[#FF9F0D]">${formatMoney(p.total)}</span>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between gap-1 text-[11px] text-gray-400">
+                            <span>${escapeHtml(p.forma_entrega)} · ${escapeHtml(p.forma_pagamento)}</span>
+                            <span>${formatDate(p.criado_em)}</span>
+                        </div>
+                        <div class="flex items-center justify-between pt-1 border-t border-[#30363d]/40">
+                            <div>${getStatusBadge(p.status)}</div>
+                            <button onclick="abrirDetalhe(${p.id})" class="rounded-lg border border-[#30363d] bg-[#161b22] px-3 py-1.5 text-xs font-bold text-gray-200 hover:border-[#FF9F0D] hover:text-[#FF9F0D] transition active:scale-95">
+                                <i class="fa-solid fa-eye mr-1"></i> Detalhes
+                            </button>
+                        </div>
+                    </div>
+                `).join("")
+                : `<p class="text-center text-gray-500 text-xs py-4">Nenhum pedido nos dias selecionados.</p>`;
+
+            result.innerHTML = `
+                <div class="flex flex-col gap-2 pb-2 border-b border-[#30363d]/40">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-week text-indigo-400"></i>
+                        <h5 class="text-sm font-black text-white">${numDias} dias selecionados</h5>
+                    </div>
+                    <div class="flex flex-wrap gap-1">${diasBadgesHTML}</div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="rounded-xl border border-emerald-500/20 bg-[#0d1117] px-3 py-2.5 relative overflow-hidden">
+                        <div class="absolute -right-1 -top-1 text-emerald-500/10 text-5xl"><i class="fa-solid fa-dollar-sign"></i></div>
+                        <p class="text-[10px] font-black uppercase text-gray-400 relative z-10">Receita Total</p>
+                        <p class="mt-1 text-lg font-black text-emerald-400 relative z-10">${formatMoney(d.total_vendas)}</p>
+                    </div>
+                    <div class="rounded-xl border border-sky-500/20 bg-[#0d1117] px-3 py-2.5 relative overflow-hidden">
+                        <div class="absolute -right-1 -top-1 text-sky-500/10 text-5xl"><i class="fa-solid fa-burger"></i></div>
+                        <p class="text-[10px] font-black uppercase text-gray-400 relative z-10">Pedidos</p>
+                        <p class="mt-1 text-xl font-black text-sky-400 relative z-10">${d.total_pedidos}</p>
+                    </div>
+                    <div class="rounded-xl border border-purple-500/20 bg-[#0d1117] px-3 py-2.5 relative overflow-hidden">
+                        <div class="absolute -right-1 -top-1 text-purple-500/10 text-5xl"><i class="fa-solid fa-receipt"></i></div>
+                        <p class="text-[10px] font-black uppercase text-gray-400 relative z-10">Ticket Médio</p>
+                        <p class="mt-1 text-base font-black text-purple-400 relative z-10">${formatMoney(d.ticket_medio)}</p>
+                    </div>
+                    <div class="rounded-xl border border-rose-500/20 bg-[#0d1117] px-3 py-2.5 relative overflow-hidden">
+                        <div class="absolute -right-1 -top-1 text-rose-500/10 text-5xl"><i class="fa-solid fa-ban"></i></div>
+                        <p class="text-[10px] font-black uppercase text-gray-400 relative z-10">Cancelados</p>
+                        <p class="mt-1 text-xl font-black text-rose-400 relative z-10">${d.cancelados}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="rounded-xl border border-[#30363d] bg-[#0d1117] p-3 space-y-3">
+                        <p class="text-[10px] font-black uppercase text-gray-500">Tipo de Entrega</p>
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-bold mb-1">
+                                <span class="text-sky-400"><i class="fa-solid fa-motorcycle w-4"></i> Delivery (${d.delivery})</span>
+                                <span class="text-white">${pctDelivery}%</span>
+                            </div>
+                            <div class="w-full bg-[#161b22] rounded-full h-1.5 overflow-hidden mb-2">
+                                <div class="bg-sky-400 h-1.5 rounded-full" style="width: ${pctDelivery}%"></div>
+                            </div>
+                            <div class="flex items-center justify-between text-xs font-bold mb-1">
+                                <span class="text-teal-400"><i class="fa-solid fa-bag-shopping w-4"></i> Retirada (${d.retirada})</span>
+                                <span class="text-white">${pctRetirada}%</span>
+                            </div>
+                            <div class="w-full bg-[#161b22] rounded-full h-1.5 overflow-hidden">
+                                <div class="bg-teal-400 h-1.5 rounded-full" style="width: ${pctRetirada}%"></div>
+                            </div>
+                        </div>
+                        <div class="pt-2 border-t border-[#30363d]/60 space-y-1.5 text-xs">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-400">Taxas de entrega:</span>
+                                <span class="font-bold text-amber-400">${formatMoney(d.total_taxas_entrega)}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-400">Vendas Delivery:</span>
+                                <span class="font-bold text-white">${formatMoney(d.valor_delivery)}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-400">Vendas Retirada:</span>
+                                <span class="font-bold text-white">${formatMoney(d.valor_retirada)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-[#30363d] bg-[#0d1117] p-3 space-y-2">
+                        <p class="text-[10px] font-black uppercase text-gray-500 mb-2">Métodos de Pagamento</p>
+                        <div class="flex items-center justify-between text-xs font-bold">
+                            <span class="text-[#00B4D8]"><i class="fa-brands fa-pix w-4 text-[13px]"></i> PIX</span>
+                            <span class="bg-[#00B4D8]/10 text-[#00B4D8] px-2.5 py-0.5 rounded-md">${d.pix}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs font-bold">
+                            <span class="text-emerald-400"><i class="fa-solid fa-money-bill-wave w-4"></i> Dinheiro</span>
+                            <span class="bg-emerald-500/10 text-emerald-400 px-2.5 py-0.5 rounded-md">${d.dinheiro}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs font-bold">
+                            <span class="text-amber-400"><i class="fa-regular fa-credit-card w-4"></i> Cartão</span>
+                            <span class="bg-amber-500/10 text-amber-400 px-2.5 py-0.5 rounded-md">${d.cartao}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-wider text-gray-400 flex items-center gap-1.5 mb-2">
+                        <i class="fa-solid fa-list-check text-indigo-400"></i> Pedidos (${d.total_pedidos})
+                    </p>
+                    <div class="hidden sm:block overflow-x-auto rounded-xl border border-[#30363d]">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-[#0d1117] text-[11px] font-black uppercase tracking-wider text-gray-400 border-b border-[#30363d]">
+                                <tr>
+                                    <th class="px-3 py-2">ID</th>
+                                    <th class="px-3 py-2">Hora</th>
+                                    <th class="px-3 py-2">Cliente</th>
+                                    <th class="px-3 py-2">Entrega</th>
+                                    <th class="px-3 py-2">Pagamento</th>
+                                    <th class="px-3 py-2">Total</th>
+                                    <th class="px-3 py-2">Status</th>
+                                    <th class="px-3 py-2 text-center">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[#30363d] bg-[#161b22] text-gray-300">
+                                ${pedidosRowsHTML}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="sm:hidden space-y-2">${pedidosCardsHTML}</div>
+                </div>
+            `;
         }
 
         function renderizarVendasDia(d) {
