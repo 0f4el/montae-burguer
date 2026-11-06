@@ -180,6 +180,7 @@ TABELA_PRECOS_ADICIONAIS = {
     "blend 120g": 10.00,
     "blend 120g (carne extra)": 10.00,
     "carne extra": 10.00,
+    "batata frita 100g": 7.90,
     "ovo extra": 4.00,
     "bacon extra": 5.00,
     "queijo cheddar extra": 4.00,
@@ -198,8 +199,6 @@ TABELA_PRECOS_ADICIONAIS = {
     "coca cola zero 1l": 12.00,
     "guarana antarctica 1l": 10.00,
     "guaraná antarctica 1l": 10.00,
-    "quarana antarctica 1l": 10.00,
-    "quarana antárctica 1l": 10.00,
     "h2oh! limoneto 350ml": 9.00,
     "h2oh limoneto 350ml": 9.00,
     "h2oh! limoneto 350 ml": 9.00,
@@ -224,6 +223,10 @@ TABELA_PRECOS_ADICIONAIS = {
     "suco caixinha 250ml goiaba": 5.00,
     "suco caixinha 250 ml (goiaba)": 5.00,
     "suco caixinha 250 ml goiaba": 5.00,
+    "refrigerante guarana 250ml": 3.50,
+    "refrigerante guaraná 250ml": 3.50,
+    "guarana 250ml": 3.50,
+    "guaraná 250ml": 3.50,
 }
 
 def normalizar_chave_adicional(texto):

@@ -1706,6 +1706,8 @@
         let calMesAtual = new Date().getMonth() + 1; // 1-12
         let calDadosMes = null;
         let calDiasSelecionados = new Set();
+        // Evita que uma resposta antiga substitua o resultado de uma seleção mais recente.
+        let calSelecaoRequestId = 0;
 
         function navegarMes(delta) {
             calMesAtual += delta;
@@ -1873,6 +1875,7 @@
         }
 
         function limparSelecaoDias() {
+            calSelecaoRequestId++;
             calDiasSelecionados.clear();
             atualizarBarraSelecao();
             document.getElementById("dash-dia-detail")?.classList.add("hidden");
@@ -1881,6 +1884,7 @@
         }
 
         function fecharDetalheDia() {
+            calSelecaoRequestId++;
             calDiasSelecionados.clear();
             atualizarBarraSelecao();
             document.getElementById("dash-dia-detail")?.classList.add("hidden");
@@ -1890,6 +1894,7 @@
 
         async function selecionarDiaCalendario(data) {
             ocultarTooltipCal();
+            const requestId = ++calSelecaoRequestId;
 
             // Toggle: se já está selecionado, remove
             if (calDiasSelecionados.has(data)) {
@@ -1909,10 +1914,10 @@
             }
 
             // Carregar dados de todos os dias selecionados
-            await carregarDetalhesDiasSelecionados();
+            await carregarDetalhesDiasSelecionados(requestId);
         }
 
-        async function carregarDetalhesDiasSelecionados() {
+        async function carregarDetalhesDiasSelecionados(requestId = calSelecaoRequestId) {
             const detalhe = document.getElementById("dash-dia-detail");
             const loadingEl = document.getElementById("dash-dia-loading");
             const result = document.getElementById("dash-dia-result");
@@ -1944,6 +1949,9 @@
                 );
 
                 const resultados = await Promise.all(promises);
+
+                // A seleção pode mudar enquanto as requisições ainda estão em andamento.
+                if (requestId !== calSelecaoRequestId) return;
 
                 // Cache dos pedidos
                 resultados.forEach(d => {
@@ -2010,7 +2018,10 @@
                 if (loadingEl) { loadingEl.classList.add("hidden"); loadingEl.classList.remove("flex"); }
                 if (result) result.classList.remove("hidden");
             } catch (err) {
-                if (loadingEl) loadingEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-xl text-red-400 mb-2"></i><p class="text-xs font-bold text-red-400">${escapeHtml(err.message)}</p>`;
+                if (requestId !== calSelecaoRequestId) return;
+                if (loadingEl) {
+                    loadingEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-xl text-red-400 mb-2"></i><p class="text-xs font-bold text-red-400">${escapeHtml(err.message)}</p>`;
+                }
             }
         }
 
