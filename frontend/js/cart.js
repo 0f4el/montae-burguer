@@ -159,14 +159,18 @@ function submitBurgerForm() {
     });
 
     const precoBase = 29.90;
-    const precoUnitarioTotal = precoBase + precoAdicionais;
+    // Calcula preço unitário do combo (sem multiplicar adicionais)
+    const precoComboUnitario = precoBase;
+    // Calcula total: (preço base × quantidade) + adicionais (apenas uma vez)
+    const precoTotal = (precoComboUnitario * builderQuantity) + precoAdicionais;
     const observacao = document.getElementById('builder-observacoes')?.value.trim() || '';
 
     const newItem = {
         id: Date.now(),
         title: "Combo Hambúrguer Artesanal",
-        price: precoUnitarioTotal,
-        quantity: builderQuantity,
+        price: precoTotal,
+        quantity: 1, // Sempre 1 porque o preço já está multiplicado
+        quantidadeCombos: builderQuantity, // Armazena quantidade real de combos para exibição
         pao: pao,
         ponto: ponto,
         cebola: cebola,
@@ -253,13 +257,14 @@ function renderCart() {
     let itemsHTML = '';
     cart.forEach((item) => {
         const itemTotal = item.price * item.quantity;
+        const displayQuantity = item.quantidadeCombos || item.quantity;
 
         itemsHTML += `
             <div class="bg-neutral-900 border border-neutral-800 rounded-2xl p-3.5 flex flex-col justify-between gap-3 shadow-md relative overflow-hidden">
                 <div class="flex items-start justify-between">
                     <div>
                         <h4 class="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
-                            <i class="fa-solid fa-burger text-[#FF9F0D]"></i> ${item.title}
+                            <i class="fa-solid fa-burger text-[#FF9F0D]"></i> ${displayQuantity}x ${item.title}
                         </h4>
                     </div>
                     <button onclick="removeItem(${item.id})" class="text-neutral-500 hover:text-red-400 text-xs transition p-1">
@@ -279,14 +284,9 @@ function renderCart() {
                 ${item.adicionais !== 'Nenhum' ? `<p class="text-[10px] text-gray-400"><strong>Extras:</strong> ${item.adicionais}</p>` : ''}
                 ${item.observacao ? `<p class="text-[10px] text-amber-400/90 italic"><strong>Obs:</strong> ${item.observacao}</p>` : ''}
                 
-                <div class="flex items-center justify-between pt-2 border-t border-neutral-800/80">
-                    <div class="flex items-center gap-2 bg-black/70 rounded-lg p-1 border border-neutral-800">
-                        <button onclick="updateQuantity(${item.id}, -1)" class="w-6 h-6 rounded bg-neutral-800 text-gray-300 font-bold hover:bg-neutral-700 flex items-center justify-center text-xs">-</button>
-                        <span class="text-xs font-black text-white px-1.5">${item.quantity}</span>
-                        <button onclick="updateQuantity(${item.id}, 1)" class="w-6 h-6 rounded bg-neutral-800 text-gray-300 font-bold hover:bg-neutral-700 flex items-center justify-center text-xs">+</button>
-                    </div>
+                <div class="flex items-center justify-end pt-2 border-t border-neutral-800/80">
                     <div class="text-right">
-                        <span class="text-[10px] text-gray-500 block">Total do item</span>
+                        <span class="text-[10px] text-gray-500 block">Total</span>
                         <span class="text-xs font-black text-[#FF9F0D]">R$ ${itemTotal.toFixed(2).replace('.', ',')}</span>
                     </div>
                 </div>
