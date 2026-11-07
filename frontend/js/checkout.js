@@ -365,8 +365,21 @@ function payloadPedido(orderDetails) {
             novaObservacao = novaObservacao ? `${obsAdicional.join(', ')} - ${novaObservacao}` : obsAdicional.join(', ');
         }
         
+        // Usa quantidadeCombos para a quantidade real de combos
+        const quantidadeReal = item.quantidadeCombos || item.quantity;
+        
+        // Se tem adicionaisDetalhados, usa eles; senão monta a string do campo adicionais
+        let adicionaisFormatados = item.adicionais || 'Nenhum';
+        if (item.adicionaisDetalhados && item.adicionaisDetalhados.length > 0) {
+            adicionaisFormatados = item.adicionaisDetalhados
+                .map(ad => `${ad.quantity}x ${ad.name}`)
+                .join(', ');
+        }
+        
         return {
             ...item,
+            quantity: quantidadeReal,
+            adicionais: adicionaisFormatados,
             observacao: novaObservacao
         };
     });

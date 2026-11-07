@@ -144,7 +144,8 @@ function submitBurgerForm() {
     const ovoBase = form.querySelector('input[name="ovo_base"]:checked')?.value || 'Com Ovo';
 
     // Coleta dos adicionais com quantidade > 0
-    let adicionais = [];
+    let adicionaisTexto = [];
+    let adicionaisDetalhados = [];
     let precoAdicionais = 0;
 
     const extraInputs = form.querySelectorAll('input[name="adicional_qty"]');
@@ -153,7 +154,8 @@ function submitBurgerForm() {
         if (qty > 0) {
             const name = input.getAttribute('data-name');
             const price = parseFloat(input.getAttribute('data-price')) || 0;
-            adicionais.push(`${qty}x ${name}`);
+            adicionaisTexto.push(`${qty}x ${name}`);
+            adicionaisDetalhados.push({ name, quantity: qty, price });
             precoAdicionais += price * qty;
         }
     });
@@ -171,6 +173,7 @@ function submitBurgerForm() {
         price: precoTotal,
         quantity: 1, // Sempre 1 porque o preço já está multiplicado
         quantidadeCombos: builderQuantity, // Armazena quantidade real de combos para exibição
+        adicionaisDetalhados: adicionaisDetalhados, // Array com detalhes dos adicionais para o backend
         pao: pao,
         ponto: ponto,
         cebola: cebola,
@@ -178,7 +181,7 @@ function submitBurgerForm() {
         baconBase: baconBase,
         ovoBase: ovoBase,
         molhoGratis: molhoGratis,
-        adicionais: adicionais.length > 0 ? adicionais.join(', ') : 'Nenhum',
+        adicionais: adicionaisTexto.length > 0 ? adicionaisTexto.join(', ') : 'Nenhum',
         observacao: observacao
     };
 
