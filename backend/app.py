@@ -242,13 +242,12 @@ PRECO_BASE_COMBO = 29.90
 PRECO_ITEM_TESTE = 1.00
 
 
-def calcular_preco_unitario_item(titulo, adicionais_str):
-    if "teste" in titulo.lower():
-        return PRECO_ITEM_TESTE
-    preco = PRECO_BASE_COMBO
+def calcular_preco_adicionais(adicionais_str):
+    """Calcula apenas o preço dos adicionais, sem incluir o preço base do combo"""
     if not adicionais_str or adicionais_str.strip().lower() in ("nenhum", ""):
-        return round(preco, 2)
+        return 0.0
 
+    preco_total = 0.0
     for part in adicionais_str.split(","):
         part = part.strip()
         if not part:
@@ -266,8 +265,16 @@ def calcular_preco_unitario_item(titulo, adicionais_str):
         if preco_extra is None:
             preco_extra = TABELA_NORMALIZADA.get(normalizar_chave_adicional(nome_extra), 0.0)
         
-        preco += qty * preco_extra
-    return round(preco, 2)
+        preco_total += qty * preco_extra
+    return round(preco_total, 2)
+
+def calcular_preco_unitario_item(titulo, adicionais_str):
+    """Calcula o preço unitário do combo (base + adicionais)"""
+    if "teste" in titulo.lower():
+        return PRECO_ITEM_TESTE
+    preco_base = PRECO_BASE_COMBO
+    preco_adicionais = calcular_preco_adicionais(adicionais_str)
+    return round(preco_base + preco_adicionais, 2)
 
 
 def montar_itens(payload_itens):
@@ -286,13 +293,24 @@ def montar_itens(payload_itens):
 
         titulo = str(bruto.get("title") or bruto.get("titulo") or "Combo Hambúrguer Artesanal").strip()
         adicionais_str = str(adicionais or "Nenhum").strip()
-        preco_calculado = calcular_preco_unitario_item(titulo, adicionais_str)
+        
+        # Calcula preço: (base × quantidade) + adicionais (fixo)
+        if "teste" in titulo.lower():
+            preco_base = PRECO_ITEM_TESTE
+        else:
+            preco_base = PRECO_BASE_COMBO
+        
+        preco_adicionais = calcular_preco_adicionais(adicionais_str)
+        # Preço total já inclui quantidade multiplicada pela base + adicionais fixos
+        preco_total_item = round((preco_base * quantidade) + preco_adicionais, 2)
+        # Preço unitário para exibição (divide por quantidade para mostrar preço "por combo")
+        preco_unitario_display = round(preco_total_item / quantidade, 2) if quantidade > 0 else preco_total_item
 
         itens.append(
             ItemPedido(
                 titulo=titulo,
                 quantidade=quantidade,
-                preco=preco_calculado,
+                preco=preco_unitario_display,  # Preço unitário para display no admin
                 pao=str(bruto.get("pao") or ""),
                 ponto=str(bruto.get("ponto") or ""),
                 cebola=str(bruto.get("cebola") or ""),
