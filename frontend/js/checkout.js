@@ -5,7 +5,7 @@ const PEDIDO_PENDENTE_STORAGE_KEY = 'montae-pedido-pendente';
 
 // Configuração de Entrega e Bairros
 const ORIGEM_BURGER = "Dom Bosco, Belo Horizonte - MG"; 
-const LINK_IFOOD = "https://www.ifood.com.br"; // Substitua pelo link real do seu restaurante no iFood
+const LINK_IFOOD = "https://www.ifood.com.br/delivery/belo-horizonte-mg/montae-burguer-dom-bosco/6b49282c-4874-4a84-aa79-3c8106ef8512";
 
 const BAIRROS_TAXA_FIXA = [
     "dom bosco", "gloria", "glória", "ipanema", 
@@ -52,11 +52,15 @@ async function calcularFrete(bairroDestino, enderecoCompleto) {
             return { valor: 5.00, status: 'ok' };
         } else if (distanciaKm <= 5) {
             return { valor: 7.00, status: 'ok' };
+        } else if (distanciaKm <= 6) {
+            return { valor: 8.00, status: 'ok' };
+        } else if (distanciaKm <= 7) {
+            return { valor: 10.00, status: 'ok' };
         } else {
             return { 
                 valor: 0, 
                 status: 'fora_da_area', 
-                mensagem: "Infelizmente não entregamos nessa região por motoboy (acima de 5km).\n\nVocê pode pedir pelo nosso iFood ou combinar a entrega via Uber no nosso WhatsApp!" 
+                mensagem: "Infelizmente não entregamos nessa região por motoboy (acima de 7km).\n\nVocê pode pedir pelo nosso iFood ou combinar a entrega via Uber no nosso WhatsApp!" 
             };
         }
 
