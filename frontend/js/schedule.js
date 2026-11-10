@@ -12,9 +12,9 @@ let statusRestauranteCache = {
  */
 async function buscarStatusServidor() {
     try {
-        const res = await fetch("/api/status-loja?t=" + Date.now(), {
-            cache: "no-store",
-            headers: { "Cache-Control": "no-cache" }
+        // Não use timestamp na URL: ele impediria o reaproveitamento do cache do servidor.
+        const res = await fetch("/api/status-loja", {
+            cache: "no-store"
         });
         if (res.ok) {
             const data = await res.json();
@@ -167,10 +167,10 @@ function atualizarInterfaceHorario() {
     }
 }
 
-// Inicializa no carregamento e consulta a cada 15 segundos
+// Inicializa no carregamento e consulta a cada 60 segundos (otimização de Egress)
 window.addEventListener('DOMContentLoaded', () => {
     buscarStatusServidor();
-    setInterval(buscarStatusServidor, 15000);
+    setInterval(buscarStatusServidor, 60000); // Reduzido de 15s para 60s (75% menos requisições)
 });
 
 // Exporta globalmente para uso em cart.js, checkout.js e ui.js

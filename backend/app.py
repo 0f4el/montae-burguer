@@ -13,6 +13,8 @@ if str(BACKEND_DIR) not in sys.path:
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from flask_cors import CORS
+from flask_caching import Cache
+from flask_compress import Compress
 from sqlalchemy import func, or_
 
 from models import (
@@ -67,6 +69,13 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 db.init_app(app)
 CORS(app, supports_credentials=True)
+
+# Otimizações de performance e redução de Egress
+cache = Cache(app, config={
+    'CACHE_TYPE': 'SimpleCache',
+    'CACHE_DEFAULT_TIMEOUT': 60,
+})
+Compress(app)  # Compressão GZIP automática (reduz ~70% do tráfego)
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "montaeadmin")
 
@@ -371,15 +380,14 @@ def health():
 
 
 @app.get("/api/status-loja")
+@cache.cached(timeout=10, query_string=True)  # Cache de 10 segundos
 def status_loja():
     aberto, msg = restaurante_aberto()
-    resp = jsonify({
+    return jsonify({
         "aberto": aberto,
         "ativo": aberto,
         "mensagem": msg if not aberto else "Restaurante aberto para pedidos.",
     })
-    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    return resp
 
 
 @app.post("/api/pedidos")
@@ -576,6 +584,7 @@ def admin_listar_todos_pedidos():
 
 @app.get("/api/admin/dashboard")
 @login_admin_obrigatorio
+@cache.cached(timeout=60)  # Cache de 1 minuto
 def admin_dashboard():
     """Retorna estatísticas do comércio para o dashboard administrativo"""
     fuso_br = timezone(timedelta(hours=-3))
@@ -878,6 +887,9 @@ def atualizar_config_horario():
 
     Configuracao.set("horario_funcionamento_ativo", "true" if ativo else "false")
     Configuracao.set("ignorar_horario_funcionamento", "true" if ativo else "false")
+
+    # Limpar cache quando status mudar
+    cache.delete_memoized(status_loja)
 
     mensagem = (
         "Horário de funcionamento ativado. Restaurante aberto para receber pedidos!"

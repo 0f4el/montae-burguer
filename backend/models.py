@@ -76,7 +76,7 @@ class Pedido(db.Model):
         backref="pedido",
         cascade="all, delete-orphan",
         order_by="ItemPedido.id",
-        lazy="selectin",
+        lazy="select",  # Otimização: só carrega itens quando explicitamente acessados
     )
 
     def to_dict(self, incluir_itens=True):
