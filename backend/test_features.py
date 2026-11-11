@@ -123,9 +123,69 @@ def test_dashboard():
             db.session.commit()
             print("✓ Teste de métricas de taxas de entrega e retirada no Dashboard passou com sucesso!")
 
+
+
+def test_dashboard_clientes_mais_pedidos():
+    with app.app_context():
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["admin"] = True
+
+            telefones_teste = ["31988880001", "31988880002"]
+            Pedido.query.filter(Pedido.whatsapp_digits.in_(telefones_teste)).delete(synchronize_session=False)
+            db.session.commit()
+
+            agora = datetime.now(timezone.utc)
+            pedidos = [
+                Pedido(
+                    nome="Cliente Ranking Principal", whatsapp="(31) 98888-0001", whatsapp_digits="31988880001",
+                    forma_entrega="Delivery", forma_pagamento="pix", subtotal=30.0, total=30.0,
+                    status="finalizado", pago=True, criado_em=agora - timedelta(days=2),
+                ),
+                Pedido(
+                    nome="Cliente Ranking Principal", whatsapp="(31) 98888-0001", whatsapp_digits="31988880001",
+                    forma_entrega="Retirada", forma_pagamento="dinheiro", subtotal=45.0, total=45.0,
+                    status="finalizado", pago=True, criado_em=agora - timedelta(days=1),
+                ),
+                Pedido(
+                    nome="Cliente Ranking Secundario", whatsapp="(31) 98888-0002", whatsapp_digits="31988880002",
+                    forma_entrega="Retirada", forma_pagamento="pix", subtotal=50.0, total=50.0,
+                    status="finalizado", pago=True, criado_em=agora,
+                ),
+            ]
+            db.session.add_all(pedidos)
+            db.session.commit()
+
+            try:
+                resposta_nome = client.get(
+                    "/api/admin/dashboard/clientes?tipo=nome&busca=Cliente%20Ranking"
+                )
+                assert resposta_nome.status_code == 200
+                clientes_nome = resposta_nome.get_json()["clientes"]
+                assert clientes_nome[0]["nome"] == "Cliente Ranking Principal"
+                assert clientes_nome[0]["pedidos"] == 2
+                assert clientes_nome[0]["total_gasto"] == 75.0
+                assert clientes_nome[0]["ticket_medio"] == 37.5
+
+                resposta_telefone = client.get(
+                    "/api/admin/dashboard/clientes?tipo=telefone&busca=(31)%2098888-0002"
+                )
+                assert resposta_telefone.status_code == 200
+                clientes_telefone = resposta_telefone.get_json()["clientes"]
+                assert len(clientes_telefone) == 1
+                assert clientes_telefone[0]["nome"] == "Cliente Ranking Secundario"
+                assert clientes_telefone[0]["pedidos"] == 1
+            finally:
+                for pedido in pedidos:
+                    db.session.delete(pedido)
+                db.session.commit()
+
+            print("✓ Teste do ranking de clientes e filtros por nome/telefone passou com sucesso!")
+
 if __name__ == "__main__":
     test_schedules()
     test_expiration()
     test_adicionais()
     test_dashboard()
+    test_dashboard_clientes_mais_pedidos()
     print("TODOS OS TESTES PASSARAM COM SUCESSO!")

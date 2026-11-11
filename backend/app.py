@@ -28,6 +28,7 @@ from models import (
     Pedido,
     agora_utc,
     db,
+    format_iso_utc,
 )
 from payments import consultar_pagamento_infinitepay, criar_checkout_infinitepay
 
@@ -113,35 +114,25 @@ def expirar_pedidos_pendentes_antigos(minutos=60):
     """
     Marca como 'expirado' pedidos com status 'aguardando_pagamento'
     que foram criados há mais de `minutos` minutos (padrão: 60).
+    Executa a expiração diretamente via UPDATE no banco de dados para evitar carregar objetos em memória.
     """
-    expirados = []
     try:
         limite = agora_utc() - timedelta(minutes=minutos)
-        pedidos_pendentes = (
+        atualizados = (
             Pedido.query.filter(
                 Pedido.status == STATUS_AGUARDANDO_PAGAMENTO,
                 Pedido.pago == False,  # noqa: E712
+                Pedido.criado_em <= limite,
+            ).update(
+                {"status": STATUS_EXPIRADO, "atualizado_em": agora_utc()},
+                synchronize_session=False,
             )
-            .all()
         )
-
-        for pedido in pedidos_pendentes:
-            if not pedido.criado_em:
-                continue
-            criado = pedido.criado_em
-            if criado.tzinfo is None:
-                criado = criado.replace(tzinfo=timezone.utc)
-            if criado <= limite:
-                pedido.status = STATUS_EXPIRADO
-                pedido.atualizado_em = agora_utc()
-                expirados.append(pedido)
-
-        if expirados:
+        if atualizados:
             db.session.commit()
     except Exception as exc:
         print(f"Erro ao expirar pedidos antigos: {exc}")
         db.session.rollback()
-    return expirados
 
 def somente_digitos(valor):
     return re.sub(r"\D", "", str(valor or ""))
@@ -699,6 +690,71 @@ def admin_dashboard():
         "cancelados_hoje": cancelados_hoje,
         "hora_servidor": agora_br.strftime("%H:%M"),
     })
+
+
+@app.get("/api/admin/dashboard/clientes")
+@login_admin_obrigatorio
+def admin_dashboard_clientes():
+    """Retorna os clientes com mais pedidos válidos, com filtros de nome ou WhatsApp."""
+    busca = str(request.args.get("busca") or "").strip()[:120]
+    tipo_filtro = str(request.args.get("tipo") or "todos").strip().lower()
+    if tipo_filtro not in {"todos", "nome", "telefone"}:
+        return erro("Tipo de filtro inválido.")
+
+    status_venda = [
+        STATUS_AGUARDANDO_APROVACAO, "em_preparacao",
+        "pronto_para_retirada", "saiu_para_entrega", "finalizado",
+    ]
+
+    consulta = db.session.query(
+        Pedido.whatsapp_digits.label("whatsapp_digits"),
+        func.max(Pedido.nome).label("nome"),
+        func.max(Pedido.whatsapp).label("whatsapp"),
+        func.count(Pedido.id).label("pedidos"),
+        func.coalesce(func.sum(Pedido.total), 0).label("total_gasto"),
+        func.max(Pedido.criado_em).label("ultimo_pedido"),
+    ).filter(Pedido.status.in_(status_venda))
+
+    if busca:
+        busca_nome = busca.lower()
+        busca_telefone = somente_digitos(busca)
+        if tipo_filtro == "nome":
+            consulta = consulta.filter(func.lower(Pedido.nome).contains(busca_nome))
+        elif tipo_filtro == "telefone":
+            if not busca_telefone:
+                return jsonify({"clientes": []})
+            consulta = consulta.filter(Pedido.whatsapp_digits.contains(busca_telefone))
+        else:
+            filtros = [func.lower(Pedido.nome).contains(busca_nome)]
+            if busca_telefone:
+                filtros.append(Pedido.whatsapp_digits.contains(busca_telefone))
+            consulta = consulta.filter(or_(*filtros))
+
+    clientes = (
+        consulta.group_by(Pedido.whatsapp_digits)
+        .order_by(
+            func.count(Pedido.id).desc(),
+            func.sum(Pedido.total).desc(),
+            func.max(Pedido.criado_em).desc(),
+        )
+        .limit(10)
+        .all()
+    )
+
+    return jsonify({
+        "clientes": [
+            {
+                "nome": cliente.nome or "Cliente não informado",
+                "whatsapp": cliente.whatsapp or cliente.whatsapp_digits,
+                "pedidos": int(cliente.pedidos or 0),
+                "total_gasto": round(float(cliente.total_gasto or 0), 2),
+                "ticket_medio": round(float(cliente.total_gasto or 0) / cliente.pedidos, 2) if cliente.pedidos else 0,
+                "ultimo_pedido": format_iso_utc(cliente.ultimo_pedido),
+            }
+            for cliente in clientes
+        ],
+    })
+
 
 @app.get("/api/admin/dashboard/dia")
 @login_admin_obrigatorio

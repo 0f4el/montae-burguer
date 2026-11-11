@@ -553,6 +553,36 @@
 
                         </div>
                     </div>
+
+                    <!-- Ranking de Clientes -->
+                    <section class="rounded-2xl border border-violet-500/20 bg-[#161b22] overflow-hidden">
+                        <div class="flex flex-col gap-3 border-b border-[#30363d] bg-violet-500/5 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                            <div>
+                                <h4 class="text-xs font-black uppercase tracking-wider text-violet-300 flex items-center gap-2">
+                                    <i class="fa-solid fa-users"></i> Clientes que Mais Pedem
+                                </h4>
+                                <p class="mt-1 text-[11px] text-gray-400">Ranking por quantidade de pedidos válidos, considerando todo o histórico.</p>
+                            </div>
+                            <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                                <label for="dash-clientes-tipo" class="sr-only">Tipo de filtro</label>
+                                <select id="dash-clientes-tipo" onchange="carregarRankingClientes()" class="rounded-xl border border-[#30363d] bg-[#0d1117] px-3 py-2 text-xs font-bold text-gray-300 outline-none transition focus:border-violet-400">
+                                    <option value="todos">Nome ou telefone</option>
+                                    <option value="nome">Somente nome</option>
+                                    <option value="telefone">Somente telefone</option>
+                                </select>
+                                <label for="dash-clientes-busca" class="sr-only">Buscar cliente</label>
+                                <div class="relative min-w-0 sm:w-64">
+                                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-500"></i>
+                                    <input id="dash-clientes-busca" type="text" oninput="agendarBuscaRankingClientes()" placeholder="Filtrar por nome ou telefone" autocomplete="off" class="w-full rounded-xl border border-[#30363d] bg-[#0d1117] py-2 pl-8 pr-3 text-xs text-white placeholder-gray-500 outline-none transition focus:border-violet-400">
+                                </div>
+                            </div>
+                        </div>
+                        <div id="dash-clientes-ranking" class="grid grid-cols-1 gap-2.5 p-3 sm:grid-cols-2 sm:p-4" aria-live="polite">
+                            <div class="col-span-full flex items-center justify-center gap-2 py-8 text-xs font-bold text-gray-500">
+                                <i class="fa-solid fa-circle-notch fa-spin text-violet-400"></i> Carregando ranking de clientes...
+                            </div>
+                        </div>
+                    </section>
                     
                 </div>
             </div>
@@ -1577,6 +1607,7 @@
 
                 // Gráfico
                 renderizarGraficoDash(data.vendas_por_dia);
+                carregarRankingClientes();
 
                 loading.classList.remove("flex");
                 loading.classList.add("hidden");
@@ -1587,6 +1618,88 @@
             } finally {
                 if (btnRefresh) btnRefresh.classList.remove("fa-spin");
             }
+        }
+
+        let buscaRankingClientesTimeout;
+        let rankingClientesAbortController;
+
+        function agendarBuscaRankingClientes() {
+            clearTimeout(buscaRankingClientesTimeout);
+            buscaRankingClientesTimeout = setTimeout(carregarRankingClientes, 300);
+        }
+
+        async function carregarRankingClientes() {
+            const tipo = document.getElementById("dash-clientes-tipo");
+            const busca = document.getElementById("dash-clientes-busca");
+            const ranking = document.getElementById("dash-clientes-ranking");
+            if (!tipo || !busca || !ranking) return;
+
+            if (rankingClientesAbortController) rankingClientesAbortController.abort();
+            const abortController = new AbortController();
+            rankingClientesAbortController = abortController;
+            const params = new URLSearchParams({ tipo: tipo.value, busca: busca.value.trim() });
+
+            ranking.innerHTML = `
+                <div class="col-span-full flex items-center justify-center gap-2 py-8 text-xs font-bold text-gray-500">
+                    <i class="fa-solid fa-circle-notch fa-spin text-violet-400"></i> Carregando ranking de clientes...
+                </div>`;
+
+            try {
+                const response = await fetch(`/api/admin/dashboard/clientes?${params.toString()}`, {
+                    credentials: "same-origin",
+                    signal: abortController.signal,
+                });
+                if (response.status === 401) {
+                    window.location.href = "/admin/login";
+                    return;
+                }
+                if (!response.ok) throw new Error("Não foi possível carregar o ranking de clientes.");
+                const data = await response.json();
+                renderizarRankingClientes(data.clientes || []);
+            } catch (err) {
+                if (err.name === "AbortError") return;
+                console.error("Erro ao carregar ranking de clientes:", err);
+                ranking.innerHTML = `
+                    <div class="col-span-full rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-center text-xs font-bold text-red-400">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Não foi possível carregar os clientes.
+                    </div>`;
+            } finally {
+                rankingClientesAbortController = null;
+            }
+        }
+
+        function renderizarRankingClientes(clientes) {
+            const ranking = document.getElementById("dash-clientes-ranking");
+            if (!ranking) return;
+
+            if (!clientes.length) {
+                ranking.innerHTML = `
+                    <div class="col-span-full rounded-xl border border-dashed border-[#30363d] bg-[#0d1117]/50 p-6 text-center">
+                        <i class="fa-solid fa-user-group mb-2 block text-lg text-gray-600"></i>
+                        <p class="text-xs font-bold text-gray-400">Nenhum cliente encontrado com esse filtro.</p>
+                    </div>`;
+                return;
+            }
+
+            ranking.innerHTML = clientes.map((cliente, indice) => {
+                const pedidos = Number(cliente.pedidos || 0);
+                const ultimoPedido = cliente.ultimo_pedido ? formatDate(cliente.ultimo_pedido) : "Sem registro";
+                return `
+                    <article class="flex items-center gap-3 rounded-xl border border-[#30363d] bg-[#0d1117] p-3 transition hover:border-violet-400/50">
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-xs font-black text-violet-300">${indice + 1}º</span>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-black text-white">${escapeHtml(cliente.nome)}</p>
+                            <p class="mt-0.5 truncate text-[11px] font-medium text-gray-400"><i class="fa-brands fa-whatsapp mr-1 text-emerald-400"></i>${escapeHtml(cliente.whatsapp)}</p>
+                            <p class="mt-1 text-[10px] text-gray-500">Último pedido: ${escapeHtml(ultimoPedido)}</p>
+                        </div>
+                        <div class="shrink-0 text-right">
+                            <p class="text-sm font-black text-[#FF9F0D]">${pedidos}</p>
+                            <p class="text-[9px] font-bold uppercase tracking-wide text-gray-500">${pedidos === 1 ? "pedido" : "pedidos"}</p>
+                            <p class="mt-1 text-[11px] font-bold text-emerald-400">${formatMoney(cliente.total_gasto)}</p>
+                            <p class="text-[9px] text-gray-500">Ticket ${formatMoney(cliente.ticket_medio)}</p>
+                        </div>
+                    </article>`;
+            }).join("");
         }
 
         function renderizarGraficoDash(dadosDia) {
