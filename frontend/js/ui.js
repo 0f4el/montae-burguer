@@ -107,6 +107,12 @@ function resetBuilderSelections() {
     const defaultOvo = form.querySelector('input[name="ovo_base"][value="Com Ovo"]');
     if (defaultOvo) defaultOvo.checked = true;
 
+    const defaultAlface = form.querySelector('input[name="alface_base"][value="Com Alface"]');
+    if (defaultAlface) defaultAlface.checked = true;
+
+    const defaultTomate = form.querySelector('input[name="tomate_base"][value="Com Tomate"]');
+    if (defaultTomate) defaultTomate.checked = true;
+
     // 2. Reseta as quantidades de TODOS os adicionais extras (incluindo Queijo Extra, Cebola Extra, etc)
     const extraInputs = form.querySelectorAll('input[name="adicional_qty"]');
     extraInputs.forEach(input => {

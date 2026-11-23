@@ -67,6 +67,7 @@ class Pedido(db.Model):
     criado_em = db.Column(db.DateTime, nullable=False, default=agora_utc)
     atualizado_em = db.Column(db.DateTime, nullable=False, default=agora_utc, onupdate=agora_utc)
     order_nsu = db.Column(db.String(80), unique=True, index=True)
+    transaction_nsu = db.Column(db.String(120))
     pago = db.Column(db.Boolean, nullable=False, default=False)
     whatsapp_enviado = db.Column(db.Boolean, nullable=False, default=False)
     captura_pagamento = db.Column(db.String(40))

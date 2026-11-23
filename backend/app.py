@@ -134,6 +134,49 @@ def expirar_pedidos_pendentes_antigos(minutos=60):
         print(f"Erro ao expirar pedidos antigos: {exc}")
         db.session.rollback()
 
+def revalidar_pagamentos_pendentes(minutos_min=2, minutos_max=55):
+    """
+    Rede de segurança: re-consulta a InfinitePay para pedidos que ainda estão
+    aguardando pagamento mas já possuem transaction_nsu salvo (ou seja, o cliente
+    já passou pelo checkout). Isso cobre cenários onde o webhook falhou ou o
+    cliente fechou o navegador antes do redirect.
+    Só verifica pedidos criados entre `minutos_min` e `minutos_max` atrás para
+    não sobrecarregar a API nem verificar pedidos muito antigos (que serão expirados).
+    """
+    try:
+        agora = agora_utc()
+        limite_recente = agora - timedelta(minutes=minutos_min)
+        limite_antigo = agora - timedelta(minutes=minutos_max)
+        slug = os.getenv("INFINITEPAY_HANDLE", "").strip()
+
+        pedidos = (
+            Pedido.query.filter(
+                Pedido.status == STATUS_AGUARDANDO_PAGAMENTO,
+                Pedido.pago == False,  # noqa: E712
+                Pedido.order_nsu.isnot(None),
+                Pedido.transaction_nsu.isnot(None),
+                Pedido.criado_em >= limite_antigo,
+                Pedido.criado_em <= limite_recente,
+            )
+            .order_by(Pedido.criado_em.asc())
+            .limit(5)
+            .all()
+        )
+
+        for pedido in pedidos:
+            try:
+                pagamento, falha = consultar_pagamento_infinitepay(
+                    pedido.order_nsu, pedido.transaction_nsu, slug
+                )
+                if not falha and pagamento and pagamento.get("paid"):
+                    ativar_pedido_pago(pedido, pagamento.get("capture_method") or "pix")
+                    print(f"[Polling] Pagamento confirmado para pedido #{pedido.id} ({pedido.order_nsu}).")
+            except Exception as exc:
+                print(f"[Polling] Erro ao verificar pedido #{pedido.id}: {exc}")
+    except Exception as exc:
+        print(f"[Polling] Erro geral na revalidação de pagamentos: {exc}")
+
+
 def somente_digitos(valor):
     return re.sub(r"\D", "", str(valor or ""))
 
@@ -325,6 +368,18 @@ def montar_itens(payload_itens):
 
 with app.app_context():
     db.create_all()
+    # Migração: adiciona coluna transaction_nsu se ainda não existir (sem Alembic)
+    try:
+        from sqlalchemy import inspect, text
+        inspector = inspect(db.engine)
+        colunas = [col["name"] for col in inspector.get_columns("pedidos")]
+        if "transaction_nsu" not in colunas:
+            db.session.execute(text("ALTER TABLE pedidos ADD COLUMN transaction_nsu VARCHAR(120)"))
+            db.session.commit()
+            print("Migração: coluna transaction_nsu adicionada à tabela pedidos.")
+    except Exception as exc:
+        print(f"Migração transaction_nsu ignorada (pode já existir): {exc}")
+        db.session.rollback()
 
 
 @app.get("/")
@@ -518,6 +573,9 @@ def verificar_pix():
         return falha
 
     pedido = Pedido.query.filter_by(order_nsu=data["order_nsu"]).first()
+    if pedido and not pedido.transaction_nsu:
+        pedido.transaction_nsu = data["transaction_nsu"]
+        db.session.commit()
     if pagamento["paid"] and pedido:
         ativar_pedido_pago(pedido, pagamento.get("capture_method"))
 
@@ -539,14 +597,19 @@ def webhook_infinitepay():
 
     if order_nsu and transaction_nsu:
         pedido = Pedido.query.filter_by(order_nsu=order_nsu).first()
-        if pedido and not pedido.pago:
-            # Consulta a API da InfinitePay para validar autenticidade do pagamento
-            pagamento, falha = consultar_pagamento_infinitepay(order_nsu, transaction_nsu, slug)
-            if not falha and pagamento and pagamento.get("paid"):
-                ativar_pedido_pago(pedido, pagamento.get("capture_method") or payload.get("capture_method") or "pix")
-                print(f"Pagamento InfinitePay autenticado e confirmado para o pedido {order_nsu}.")
-            else:
-                print(f"Webhook InfinitePay recebido mas o pagamento não foi validado na API: {order_nsu}")
+        if pedido:
+            # Salva transaction_nsu para possibilitar re-consultas futuras (polling)
+            if not pedido.transaction_nsu:
+                pedido.transaction_nsu = transaction_nsu
+                db.session.commit()
+            if not pedido.pago:
+                # Consulta a API da InfinitePay para validar autenticidade do pagamento
+                pagamento, falha = consultar_pagamento_infinitepay(order_nsu, transaction_nsu, slug)
+                if not falha and pagamento and pagamento.get("paid"):
+                    ativar_pedido_pago(pedido, pagamento.get("capture_method") or payload.get("capture_method") or "pix")
+                    print(f"Pagamento InfinitePay autenticado e confirmado para o pedido {order_nsu}.")
+                else:
+                    print(f"Webhook InfinitePay recebido mas o pagamento não foi validado na API: {order_nsu}")
     return {"status": "ok"}
 
 
@@ -554,6 +617,7 @@ def webhook_infinitepay():
 @login_admin_obrigatorio
 def admin_listar_pedidos():
     expirar_pedidos_pendentes_antigos()
+    revalidar_pagamentos_pendentes()
     pedidos = (
         Pedido.query.filter(Pedido.status.in_(STATUS_KANBAN))
         .order_by(Pedido.criado_em.asc())
@@ -569,6 +633,7 @@ def admin_listar_pedidos():
 @login_admin_obrigatorio
 def admin_listar_todos_pedidos():
     expirar_pedidos_pendentes_antigos()
+    revalidar_pagamentos_pendentes()
     pedidos = Pedido.query.order_by(Pedido.criado_em.desc()).all()
     return jsonify({"pedidos": [pedido.to_dict() for pedido in pedidos]})
 

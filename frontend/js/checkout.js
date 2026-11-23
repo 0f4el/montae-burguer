@@ -363,6 +363,8 @@ function payloadPedido(orderDetails) {
         let obsAdicional = [];
         if (item.baconBase === 'Sem Bacon') obsAdicional.push('Sem Bacon (Base)');
         if (item.ovoBase === 'Sem Ovo') obsAdicional.push('Sem Ovo (Base)');
+        if (item.alfaceBase === 'Sem Alface') obsAdicional.push('Sem Alface (Base)');
+        if (item.tomateBase === 'Sem Tomate') obsAdicional.push('Sem Tomate (Base)');
         
         let novaObservacao = item.observacao || '';
         if (obsAdicional.length > 0) {
